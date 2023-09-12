@@ -293,6 +293,9 @@ bool
 wasm_obj_is_func_obj(WASMObjectRef obj);
 
 bool
+wasm_obj_is_stringref_obj(WASMObjectRef obj);
+
+bool
 wasm_obj_is_internal_obj(WASMObjectRef obj);
 
 bool

@@ -414,6 +414,7 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringrefObjectRef stringref_obj;
     WASMLocalObjectRef local_ref;
+    WASMRttTypeRef rtt_type;
 
     if (!(stringref_obj =
               gc_obj_malloc(heap_handle, sizeof(WASMStringrefObject)))) {
@@ -423,7 +424,8 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     wasm_runtime_push_local_object_ref(exec_env, &local_ref);
     local_ref.val = (WASMObjectRef)stringref_obj;
 
-    stringref_obj->header = WASM_OBJ_ANYREF_OBJ_FLAG;
+    rtt_type->type_flag = WASM_TYPE_STRINGRF;
+    stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->pointer = pointer;
 
     return stringref_obj;
@@ -586,6 +588,20 @@ wasm_obj_is_func_obj(WASMObjectRef obj)
 
     rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
     return rtt_type->type_flag == WASM_TYPE_FUNC ? true : false;
+}
+
+bool
+wasm_obj_is_stringref_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGRF ? true : false;
 }
 
 bool

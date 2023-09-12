@@ -167,6 +167,7 @@ typedef void *table_elem_type_t;
 #define WASM_TYPE_FUNC 0
 #define WASM_TYPE_STRUCT 1
 #define WASM_TYPE_ARRAY 2
+#define WASM_TYPE_STRINGRF 3
 
 typedef enum encoding_flag {
     UTF8,
