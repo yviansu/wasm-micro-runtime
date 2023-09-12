@@ -424,6 +424,7 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     wasm_runtime_push_local_object_ref(exec_env, &local_ref);
     local_ref.val = (WASMObjectRef)stringref_obj;
 
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGRF;
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->pointer = pointer;
