@@ -432,28 +432,50 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     return stringref_obj;
 }
 
-WASMStringrefRepresentationObjectRef
-wasm_stringref_repr_obj_new(WASMExecEnv *exec_env, const void *pointer,
-                            uint32 length, uint32 flag)
+// WASMStringrefRepresentationObjectRef
+// wasm_stringref_repr_obj_new(WASMExecEnv *exec_env, const void *pointer,
+//                             uint32 length, encoding_flag flag)
+// {
+//     void *heap_handle = get_gc_heap_handle(exec_env);
+//     WASMStringrefRepresentationObjectRef stringref_repr_obj;
+//     WASMLocalObjectRef local_ref;
+
+//     if (!(stringref_repr_obj = gc_obj_malloc(
+//               heap_handle, sizeof(WASMStringrefRepresentationObject)))) {
+//         return NULL;
+//     }
+
+//     wasm_runtime_push_local_object_ref(exec_env, &local_ref);
+//     local_ref.val = (WASMObjectRef)stringref_repr_obj;
+
+//     stringref_repr_obj->header = WASM_OBJ_ANYREF_OBJ_FLAG;
+//     stringref_repr_obj->pointer = pointer;
+//     stringref_repr_obj->length = length;
+//     stringref_repr_obj->flag = flag;
+
+//     return stringref_repr_obj;
+// }
+
+uint32
+wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 {
-    void *heap_handle = get_gc_heap_handle(exec_env);
-    WASMStringrefRepresentationObjectRef stringref_repr_obj;
-    WASMLocalObjectRef local_ref;
+    WASMStringVec *string_vec = stringref_obj->pointer;
+    uint32 str_len = string_vec->length;
 
-    if (!(stringref_repr_obj = gc_obj_malloc(
-              heap_handle, sizeof(WASMStringrefRepresentationObject)))) {
-        return NULL;
-    }
+    return str_len;
+}
 
-    wasm_runtime_push_local_object_ref(exec_env, &local_ref);
-    local_ref.val = (WASMObjectRef)stringref_repr_obj;
+bool
+wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
+{
+    WASMStringVec *string_vec = stringref_obj->pointer;
+    uint32 str_len = string_vec->length;
 
-    stringref_repr_obj->header = WASM_OBJ_ANYREF_OBJ_FLAG;
-    stringref_repr_obj->pointer = pointer;
-    stringref_repr_obj->length = length;
-    stringref_repr_obj->flag = flag;
+    /* TODO: unify value by different encode flag */
+    strncpy(value, string_vec->string_byte, str_len);
+    value[str_len] = '\0';
 
-    return stringref_repr_obj;
+    return true;
 }
 
 WASMObjectRef

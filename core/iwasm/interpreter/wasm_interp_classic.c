@@ -1385,7 +1385,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMFuncObjectRef func_obj;
     WASMI31ObjectRef i31_obj;
     WASMExternrefObjectRef externref_obj;
-    WASMStringrefRepresentationObjectRef stringref_repr_obj;
     WASMStringrefObjectRef stringref_obj;
 #endif
 
@@ -2666,6 +2665,26 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         HANDLE_OP_END();
                     }
 
+                    case WASM_OP_STRING_NEW_UTF8:
+                    {
+                        uint32 mem_idx, address, bytes;
+                        WASMStringVec *string_vec;
+                        void *wtf8_str;
+
+                        read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
+                        bytes = POP_I32();
+                        address = POP_I32();
+
+                        /* TODO: copy from memory */
+
+                        string_vec = wasm_runtime_malloc(sizeof(WASMStringVec));
+                        wtf8_str = wasm_runtime_malloc(sizeof(void *) * bytes);
+
+                        uint32 tmp = LOAD_I32((uintptr_t)address);
+                        utf8_to_wtf8((uintptr_t)address, wtf8_str, bytes);
+                        printf("%s", wtf8_str);
+                    }
+
                     case WASM_OP_STRING_CONST:
                     {
                         WASMModule *wasm_module = module->module;
@@ -2675,11 +2694,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         read_leb_uint32(frame_ip, frame_ip_end, contents);
                         string_vec = wasm_module->stringrefs->string_vec;
 
-                        stringref_repr_obj = wasm_stringref_repr_obj_new(
-                            exec_env, (*(string_vec + contents)).string_byte,
-                            (*(string_vec + contents)).length, WTF8);
+                        // stringref_repr_obj = wasm_stringref_repr_obj_new(
+                        //     exec_env, (*(string_vec + contents)).string_byte,
+                        //     (*(string_vec + contents)).length, WTF8);
                         stringref_obj = wasm_stringref_obj_new(
-                            exec_env, stringref_repr_obj);
+                            exec_env, string_vec + contents);
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }

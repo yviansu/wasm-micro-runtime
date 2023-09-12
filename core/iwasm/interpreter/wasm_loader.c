@@ -3898,8 +3898,8 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
                     return false;
                 }
                 string_vec = stringref->string_vec;
-
                 string_vec->length = string_length;
+                string_vec->flag = WTF8;
 
                 total_size = sizeof(uint8) * (uint64)string_length;
                 if (!(string_vec->string_byte = loader_malloc(
@@ -12234,9 +12234,10 @@ re_scan:
                         break;
                     }
 
+                    case WASM_OP_STRING_NEW_UTF8:
                     case WASM_OP_STRING_CONST:
+                    case WASM_OP_STRING_NEW_WTF8:
                     {
-                        read_leb_uint32(p, p_end, type_idx);
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }

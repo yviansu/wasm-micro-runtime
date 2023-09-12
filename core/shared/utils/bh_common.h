@@ -66,6 +66,9 @@ bh_strdup(const char *s);
 char *
 wa_strdup(const char *s);
 
+bool
+utf8_to_wtf8(char *utf8_str, char *wtf8_str, uint32 length);
+
 #ifdef __cplusplus
 }
 #endif

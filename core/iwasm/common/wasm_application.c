@@ -700,13 +700,14 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                     else if (wasm_obj_is_func_obj(gc_obj))
                         os_printf("ref.func");
                     else if (wasm_obj_is_stringref_obj(gc_obj)) {
-                        WASMStringrefRepresentationObjectRef string_repr_obj =
-                            ((WASMStringrefObjectRef)gc_obj)->pointer;
-                        uint32 str_len = string_repr_obj->length;
                         char *str;
+                        uint32 str_len;
+
+                        str_len = wasm_get_stringref_length(
+                            (WASMStringrefObjectRef)gc_obj);
                         str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
-                        strncpy(str, string_repr_obj->pointer, str_len);
-                        str[str_len] = '\0';
+                        wasm_get_stringref_value((WASMStringrefObjectRef)gc_obj,
+                                                 str);
                         os_printf("%s", str);
                     }
                     else if (wasm_obj_is_externref_obj(gc_obj)) {

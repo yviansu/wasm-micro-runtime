@@ -612,6 +612,7 @@ typedef struct BlockAddr {
 typedef struct WASMStringVec {
     uint8 *string_byte;
     uint32 length;
+    encoding_flag flag;
 } WASMStringVec;
 
 typedef struct WASMStringref {

@@ -108,13 +108,13 @@ typedef struct WASMStringrefObject {
     void *pointer;
 } WASMStringrefObject, *WASMStringrefObjectRef;
 
-/* Representation of WASM stringref representation objects */
-typedef struct WASMStringrefRepresentationObject {
-    WASMObjectHeader header;
-    void *pointer;
-    uint32 length;
-    uint32 flag;
-} WASMStringrefRepresentationObject, *WASMStringrefRepresentationObjectRef;
+// /* Representation of WASM stringref representation objects */
+// typedef struct WASMStringrefRepresentationObject {
+//     WASMObjectHeader header;
+//     void *pointer;
+//     uint32 length;
+//     encoding_flag flag;
+// } WASMStringrefRepresentationObject, *WASMStringrefRepresentationObjectRef;
 
 typedef struct BreadCrumb {
     uint32 index;
@@ -243,12 +243,19 @@ wasm_externref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 WASMAnyrefObjectRef
 wasm_anyref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 
-WASMStringrefRepresentationObjectRef
-wasm_stringref_repr_obj_new(struct WASMExecEnv *exec_env, const void *pointer,
-                            uint32 length, uint32 flag);
+// WASMStringrefRepresentationObjectRef
+// wasm_stringref_repr_obj_new(struct WASMExecEnv *exec_env, const void
+// *pointer,
+//                             uint32 length, uint32 flag);
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
+
+uint32
+wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
+
+bool
+wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value);
 
 /* Implementation of opcode extern.internalize */
 WASMObjectRef
