@@ -108,24 +108,15 @@ typedef struct WASMStringrefObject {
     void *pointer;
 } WASMStringrefObject, *WASMStringrefObjectRef;
 
-// /* Representation of WASM stringref representation objects */
-// typedef struct WASMStringrefRepresentationObject {
-//     WASMObjectHeader header;
-//     void *pointer;
-//     uint32 length;
-//     encoding_flag flag;
-// } WASMStringrefRepresentationObject, *WASMStringrefRepresentationObjectRef;
-
-typedef struct BreadCrumb {
-    uint32 index;
-    uint32 encoding_flag;
-} BreadCrumb;
-
-typedef struct WASMStringviewObject {
+typedef struct WASMStringviewWTF8Object {
     WASMObjectHeader header;
     void *pointer;
-    BreadCrumb *breadcrumb;
-} WASMStringviewObject, *WASMStringviewObjectRef;
+} WASMStringviewWTF8Object, *WASMStringviewWTF8ObjectRef;
+
+typedef struct WASMStringviewWTF16Object {
+    WASMObjectHeader header;
+    void *pointer;
+} WASMStringviewWTF16Object, *WASMStringviewWTF16ObjectRef;
 
 typedef struct WASMStringviewIterObject {
     WASMObjectHeader header;

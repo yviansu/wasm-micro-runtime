@@ -12235,15 +12235,22 @@ re_scan:
                     }
 
                     case WASM_OP_STRING_NEW_UTF8:
-                    {
-                        POP_I32();
-                        POP_I32();
-                        PUSH_REF(REF_TYPE_STRINGREF);
-                    }
-                    case WASM_OP_STRING_CONST:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
+                        POP_I32();
+                        POP_I32();
                         PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_CONST:
+                    {
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_AS_WTF8:
+                    {
+                        POP_REF(REF_TYPE_STRINGREF);
+                        PUSH_REF(REF_TYPE_STRINGVIEWWTF8);
                         break;
                     }
 

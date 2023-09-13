@@ -2667,10 +2667,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     }
 
                     case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_WTF8:
                     {
                         uint32 mem_idx, addr, bytes;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
+                        encoding_flag flag = WTF8;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         bytes = POP_I32();
@@ -2679,15 +2681,21 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         memory_inst = module->memories[mem_idx];
                         str_addr = memory_inst->memory_data + addr;
 
+                        if (opcode == WASM_OP_STRING_NEW_UTF8) {
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_NEW_WTF8) {
+                            flag = WTF8;
+                        }
+
                         string_vec_obj = wasm_stringref_vec_obj_new(
-                            exec_env, str_addr, bytes, UTF8);
+                            exec_env, str_addr, bytes, flag);
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, string_vec_obj);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
-
                     case WASM_OP_STRING_CONST:
                     {
                         WASMModule *wasm_module = module->module;
@@ -2701,6 +2709,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_AS_WTF8:
+                    {
+                        stringref_obj = POP_REF();
                     }
 
                     default:
