@@ -609,14 +609,13 @@ typedef struct BlockAddr {
     uint8 *end_addr;
 } BlockAddr;
 
-typedef struct WASMStringVec {
+typedef struct WASMStringVecObject {
     uint8 *string_byte;
     uint32 length;
-    encoding_flag flag;
-} WASMStringVec;
+} WASMStringVecObject, *WASMStringVecObjectRef;
 
 typedef struct WASMStringref {
-    WASMStringVec *string_vec;
+    WASMStringVecObject *string_vec;
 } WASMStringref;
 
 #if WASM_ENABLE_LIBC_WASI != 0

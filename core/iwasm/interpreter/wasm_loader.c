@@ -3875,7 +3875,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
     uint8 *string_byte;
     uint64 total_size;
     WASMStringref *stringref;
-    WASMStringVec *string_vec;
+    WASMStringVecObject *string_vec;
 
     read_leb_uint32(p, p_end, deferred_count);
     read_leb_uint32(p, p_end, immediate_count);
@@ -3893,13 +3893,13 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
             read_leb_uint32(p, p_end, string_length);
 
             if (string_length > 0) {
-                if (!(stringref->string_vec = loader_malloc(
-                          sizeof(WASMStringVec), error_buf, error_buf_size))) {
+                if (!(stringref->string_vec =
+                          loader_malloc(sizeof(WASMStringVecObject), error_buf,
+                                        error_buf_size))) {
                     return false;
                 }
                 string_vec = stringref->string_vec;
                 string_vec->length = string_length;
-                string_vec->flag = WTF8;
 
                 total_size = sizeof(uint8) * (uint64)string_length;
                 if (!(string_vec->string_byte = loader_malloc(
@@ -12235,6 +12235,11 @@ re_scan:
                     }
 
                     case WASM_OP_STRING_NEW_UTF8:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                    }
                     case WASM_OP_STRING_CONST:
                     case WASM_OP_STRING_NEW_WTF8:
                     {

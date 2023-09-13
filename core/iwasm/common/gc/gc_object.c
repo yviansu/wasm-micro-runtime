@@ -413,16 +413,12 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringrefObjectRef stringref_obj;
-    WASMLocalObjectRef local_ref;
     WASMRttTypeRef rtt_type;
 
     if (!(stringref_obj =
               gc_obj_malloc(heap_handle, sizeof(WASMStringrefObject)))) {
         return NULL;
     }
-
-    wasm_runtime_push_local_object_ref(exec_env, &local_ref);
-    local_ref.val = (WASMObjectRef)stringref_obj;
 
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGRF;
@@ -432,35 +428,49 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     return stringref_obj;
 }
 
-// WASMStringrefRepresentationObjectRef
-// wasm_stringref_repr_obj_new(WASMExecEnv *exec_env, const void *pointer,
-//                             uint32 length, encoding_flag flag)
-// {
-//     void *heap_handle = get_gc_heap_handle(exec_env);
-//     WASMStringrefRepresentationObjectRef stringref_repr_obj;
-//     WASMLocalObjectRef local_ref;
+WASMStringVecObjectRef
+wasm_stringref_vec_obj_new(WASMExecEnv *exec_env, void *pointer, uint32 length,
+                           encoding_flag flag)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringVecObjectRef stringref_vec_obj;
+    uint64 string_size;
+    uint32 i;
+    bool is_success;
 
-//     if (!(stringref_repr_obj = gc_obj_malloc(
-//               heap_handle, sizeof(WASMStringrefRepresentationObject)))) {
-//         return NULL;
-//     }
+    if (!(stringref_vec_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringVecObject)))) {
+        return NULL;
+    }
 
-//     wasm_runtime_push_local_object_ref(exec_env, &local_ref);
-//     local_ref.val = (WASMObjectRef)stringref_repr_obj;
+    string_size = sizeof(uint8) * (uint64)length;
+    if (!(stringref_vec_obj->string_byte =
+              gc_obj_malloc(heap_handle, string_size))) {
+        return NULL;
+    }
+    stringref_vec_obj->length = length;
 
-//     stringref_repr_obj->header = WASM_OBJ_ANYREF_OBJ_FLAG;
-//     stringref_repr_obj->pointer = pointer;
-//     stringref_repr_obj->length = length;
-//     stringref_repr_obj->flag = flag;
+    if (flag == WTF8) {
+        for (i = 0; i < length; i++) {
+            *(stringref_vec_obj->string_byte + i) = *(char *)(pointer + i);
+        }
+    }
+    else if (flag == UTF8) {
+        is_success = utf8_to_wtf8(
+            (char *)pointer, (char *)stringref_vec_obj->string_byte, length);
+        if (!is_success) {
+            LOG_ERROR("error: Failed to transcode from UTF-8 to WTF-8.");
+        }
+    }
 
-//     return stringref_repr_obj;
-// }
+    return stringref_vec_obj;
+}
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 {
-    WASMStringVec *string_vec = stringref_obj->pointer;
-    uint32 str_len = string_vec->length;
+    WASMStringVecObjectRef string_vec_obj = stringref_obj->pointer;
+    uint32 str_len = string_vec_obj->length;
 
     return str_len;
 }
@@ -468,11 +478,10 @@ wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 bool
 wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
 {
-    WASMStringVec *string_vec = stringref_obj->pointer;
-    uint32 str_len = string_vec->length;
+    WASMStringVecObjectRef string_vec_obj = stringref_obj->pointer;
+    uint32 str_len = string_vec_obj->length;
 
-    /* TODO: unify value by different encode flag */
-    strncpy(value, string_vec->string_byte, str_len);
+    strncpy(value, string_vec_obj->string_byte, str_len);
     value[str_len] = '\0';
 
     return true;

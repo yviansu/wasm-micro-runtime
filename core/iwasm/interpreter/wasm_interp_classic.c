@@ -1386,6 +1386,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMI31ObjectRef i31_obj;
     WASMExternrefObjectRef externref_obj;
     WASMStringrefObjectRef stringref_obj;
+    WASMStringVecObjectRef string_vec_obj;
 #endif
 
 #if WASM_ENABLE_DEBUG_INTERP != 0
@@ -2667,38 +2668,37 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                     case WASM_OP_STRING_NEW_UTF8:
                     {
-                        uint32 mem_idx, address, bytes;
-                        WASMStringVec *string_vec;
-                        void *wtf8_str;
+                        uint32 mem_idx, addr, bytes;
+                        WASMMemoryInstance *memory_inst;
+                        void *str_addr;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         bytes = POP_I32();
-                        address = POP_I32();
+                        addr = POP_I32();
 
-                        /* TODO: copy from memory */
+                        memory_inst = module->memories[mem_idx];
+                        str_addr = memory_inst->memory_data + addr;
 
-                        string_vec = wasm_runtime_malloc(sizeof(WASMStringVec));
-                        wtf8_str = wasm_runtime_malloc(sizeof(void *) * bytes);
+                        string_vec_obj = wasm_stringref_vec_obj_new(
+                            exec_env, str_addr, bytes, UTF8);
+                        stringref_obj =
+                            wasm_stringref_obj_new(exec_env, string_vec_obj);
 
-                        uint32 tmp = LOAD_I32((uintptr_t)address);
-                        utf8_to_wtf8((uintptr_t)address, wtf8_str, bytes);
-                        printf("%s", wtf8_str);
+                        PUSH_REF(stringref_obj);
+                        HANDLE_OP_END();
                     }
 
                     case WASM_OP_STRING_CONST:
                     {
                         WASMModule *wasm_module = module->module;
                         uint32 contents;
-                        WASMStringVec *string_vec;
 
                         read_leb_uint32(frame_ip, frame_ip_end, contents);
-                        string_vec = wasm_module->stringrefs->string_vec;
 
-                        // stringref_repr_obj = wasm_stringref_repr_obj_new(
-                        //     exec_env, (*(string_vec + contents)).string_byte,
-                        //     (*(string_vec + contents)).length, WTF8);
+                        string_vec_obj = wasm_module->stringrefs->string_vec;
                         stringref_obj = wasm_stringref_obj_new(
-                            exec_env, string_vec + contents);
+                            exec_env, string_vec_obj + contents);
+
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }

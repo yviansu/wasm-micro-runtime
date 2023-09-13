@@ -243,10 +243,9 @@ wasm_externref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 WASMAnyrefObjectRef
 wasm_anyref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 
-// WASMStringrefRepresentationObjectRef
-// wasm_stringref_repr_obj_new(struct WASMExecEnv *exec_env, const void
-// *pointer,
-//                             uint32 length, uint32 flag);
+WASMStringVecObjectRef
+wasm_stringref_vec_obj_new(struct WASMExecEnv *exec_env, void *pointer,
+                           uint32 length, encoding_flag flag);
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *pointer);

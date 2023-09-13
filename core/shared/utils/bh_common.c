@@ -196,24 +196,3 @@ utf8_to_wtf8(char *utf8_str, char *wtf8_str, uint32 length)
 
     return true;
 }
-
-// uint32 utf8_to_wtf8(uint32 utf8_value) {
-//     uint32 res;
-//     if ((utf8_value & 0x80) == 0) {
-//         *wtf8_str_str++ = *utf8_str_str++;
-//         i +=1;
-//     } else if ((*utf8_str_str & 0xE0) == 0xC0) {
-//         *wtf8_str++ = 0xC0 | ((*utf8_str >> 6) & 0x1F);
-//         *wtf8_str++ = 0x80 | (*utf8_str & 0x3F);
-//         utf8_str += 2;
-//         i+=2;
-//     } else if ((*utf8_str & 0xF0) == 0xE0) {
-//         *wtf8_str++ = 0xE0 | ((*utf8_str >> 12) & 0x0F);
-//         *wtf8_str++ = 0x80 | ((*utf8_str >> 6) & 0x3F);
-//         *wtf8_str++ = 0x80 | (*utf8_str & 0x3F);
-//         utf8_str += 3;
-//         i+=3;
-//     } else {
-//         return false;
-//     }
-// }
