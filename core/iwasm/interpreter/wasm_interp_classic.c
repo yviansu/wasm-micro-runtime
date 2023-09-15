@@ -13,6 +13,9 @@
 #if WASM_ENABLE_GC != 0
 #include "../common/gc/gc_object.h"
 #include "mem_alloc.h"
+#if WASM_ENABLE_STRINGREF != 0
+#include "../common/gc/string_object.h"
+#endif
 #endif
 #if WASM_ENABLE_SHARED_MEMORY != 0
 #include "../common/wasm_shared_memory.h"
@@ -1385,8 +1388,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMFuncObjectRef func_obj;
     WASMI31ObjectRef i31_obj;
     WASMExternrefObjectRef externref_obj;
+#if WASM_ENABLE_STRINGREF != 0
     WASMStringrefObjectRef stringref_obj;
-    WASMStringVecObjectRef string_vec_obj;
+    WASMString *string_obj;
+#endif
 #endif
 
 #if WASM_ENABLE_DEBUG_INTERP != 0
@@ -2688,10 +2693,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = WTF8;
                         }
 
-                        string_vec_obj = wasm_stringref_vec_obj_new(
-                            exec_env, str_addr, bytes, flag);
+                        string_obj = wasm_string_obj_new(str_addr, bytes, flag);
                         stringref_obj =
-                            wasm_stringref_obj_new(exec_env, string_vec_obj);
+                            wasm_stringref_obj_new(exec_env, string_obj);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2703,9 +2707,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         read_leb_uint32(frame_ip, frame_ip_end, contents);
 
-                        string_vec_obj = wasm_module->stringrefs->string_vec;
+                        string_obj = wasm_module->stringref->string_obj;
                         stringref_obj = wasm_stringref_obj_new(
-                            exec_env, string_vec_obj + contents);
+                            exec_env, string_obj + contents);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();

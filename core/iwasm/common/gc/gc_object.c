@@ -428,65 +428,6 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     return stringref_obj;
 }
 
-WASMStringVecObjectRef
-wasm_stringref_vec_obj_new(WASMExecEnv *exec_env, void *pointer, uint32 length,
-                           encoding_flag flag)
-{
-    void *heap_handle = get_gc_heap_handle(exec_env);
-    WASMStringVecObjectRef stringref_vec_obj;
-    uint64 string_size;
-    uint32 i;
-    bool is_success;
-
-    if (!(stringref_vec_obj =
-              gc_obj_malloc(heap_handle, sizeof(WASMStringVecObject)))) {
-        return NULL;
-    }
-
-    string_size = sizeof(uint8) * (uint64)length;
-    if (!(stringref_vec_obj->string_byte =
-              gc_obj_malloc(heap_handle, string_size))) {
-        return NULL;
-    }
-    stringref_vec_obj->length = length;
-
-    if (flag == WTF8) {
-        for (i = 0; i < length; i++) {
-            *(stringref_vec_obj->string_byte + i) = *(char *)(pointer + i);
-        }
-    }
-    else if (flag == UTF8) {
-        is_success = utf8_to_wtf8(
-            (char *)pointer, (char *)stringref_vec_obj->string_byte, length);
-        if (!is_success) {
-            LOG_ERROR("error: Failed to transcode from UTF-8 to WTF-8.");
-        }
-    }
-
-    return stringref_vec_obj;
-}
-
-uint32
-wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
-{
-    WASMStringVecObjectRef string_vec_obj = stringref_obj->pointer;
-    uint32 str_len = string_vec_obj->length;
-
-    return str_len;
-}
-
-bool
-wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
-{
-    WASMStringVecObjectRef string_vec_obj = stringref_obj->pointer;
-    uint32 str_len = string_vec_obj->length;
-
-    strncpy(value, string_vec_obj->string_byte, str_len);
-    value[str_len] = '\0';
-
-    return true;
-}
-
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(WASMExternrefObjectRef externref_obj)
 {

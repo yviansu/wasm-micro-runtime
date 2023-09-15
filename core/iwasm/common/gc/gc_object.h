@@ -234,18 +234,8 @@ wasm_externref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 WASMAnyrefObjectRef
 wasm_anyref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 
-WASMStringVecObjectRef
-wasm_stringref_vec_obj_new(struct WASMExecEnv *exec_env, void *pointer,
-                           uint32 length, encoding_flag flag);
-
 WASMStringrefObjectRef
 wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
-
-uint32
-wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
-
-bool
-wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value);
 
 /* Implementation of opcode extern.internalize */
 WASMObjectRef

@@ -3875,38 +3875,37 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
     uint8 *string_byte;
     uint64 total_size;
     WASMStringref *stringref;
-    WASMStringVecObject *string_vec;
+    WASMString *string_obj;
 
     read_leb_uint32(p, p_end, deferred_count);
     read_leb_uint32(p, p_end, immediate_count);
 
     if (immediate_count > 0) {
         total_size = sizeof(WASMStringref) * (uint64)immediate_count;
-        if (!(module->stringrefs =
+        if (!(module->stringref =
                   loader_malloc(total_size, error_buf, error_buf_size))) {
             return false;
         }
 
-        stringref = module->stringrefs;
+        stringref = module->stringref;
 
         for (i = 0; i < immediate_count; i++) {
             read_leb_uint32(p, p_end, string_length);
 
             if (string_length > 0) {
-                if (!(stringref->string_vec =
-                          loader_malloc(sizeof(WASMStringVecObject), error_buf,
-                                        error_buf_size))) {
+                if (!(stringref->string_obj = loader_malloc(
+                          sizeof(WASMString), error_buf, error_buf_size))) {
                     return false;
                 }
-                string_vec = stringref->string_vec;
-                string_vec->length = string_length;
+                string_obj = stringref->string_obj;
+                string_obj->length = string_length;
 
                 total_size = sizeof(uint8) * (uint64)string_length;
-                if (!(string_vec->string_byte = loader_malloc(
+                if (!(string_obj->string_byte = loader_malloc(
                           total_size, error_buf, error_buf_size))) {
                     return false;
                 }
-                string_byte = string_vec->string_byte;
+                string_byte = string_obj->string_byte;
 
                 for (j = 0; j < string_length; j++) {
                     *(string_byte + j) = read_uint8(p);

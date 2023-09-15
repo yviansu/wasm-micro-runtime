@@ -609,13 +609,13 @@ typedef struct BlockAddr {
     uint8 *end_addr;
 } BlockAddr;
 
-typedef struct WASMStringVecObject {
+typedef struct WASMString {
     uint8 *string_byte;
     uint32 length;
-} WASMStringVecObject, *WASMStringVecObjectRef;
+} WASMString;
 
 typedef struct WASMStringref {
-    WASMStringVecObject *string_vec;
+    WASMString *string_obj;
 } WASMStringref;
 
 #if WASM_ENABLE_LIBC_WASI != 0
@@ -730,7 +730,7 @@ struct WASMModule {
     WASMTableSeg *table_segments;
     WASMDataSeg **data_segments;
     uint32 start_function;
-    WASMStringref *stringrefs;
+    WASMStringref *stringref;
 
     /* total global variable size */
     uint32 global_data_size;
