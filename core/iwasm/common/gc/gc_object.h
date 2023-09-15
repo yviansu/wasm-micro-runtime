@@ -283,6 +283,12 @@ bool
 wasm_obj_is_stringref_obj(WASMObjectRef obj);
 
 bool
+wasm_obj_is_stringview_wtf8_obj(WASMObjectRef obj);
+
+bool
+wasm_obj_is_stringview_wtf16_obj(WASMObjectRef obj);
+
+bool
 wasm_obj_is_internal_obj(WASMObjectRef obj);
 
 bool

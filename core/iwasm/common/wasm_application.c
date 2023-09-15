@@ -699,7 +699,8 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                     }
                     else if (wasm_obj_is_func_obj(gc_obj))
                         os_printf("ref.func");
-                    else if (wasm_obj_is_stringref_obj(gc_obj)) {
+                    else if (wasm_obj_is_stringref_obj(gc_obj)
+                             || wasm_obj_is_stringview_wtf8_obj(gc_obj)) {
                         char *str;
                         uint32 str_len;
 

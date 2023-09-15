@@ -1394,6 +1394,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMExternrefObjectRef externref_obj;
 #if WASM_ENABLE_STRINGREF != 0
     WASMStringrefObjectRef stringref_obj;
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
     WASMString *string_obj;
 #endif
 #endif
@@ -2675,6 +2676,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         HANDLE_OP_END();
                     }
 
+#if WASM_ENABLE_STRINGREF != 0
                     case WASM_OP_STRING_NEW_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
@@ -2721,8 +2723,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         stringref_obj = POP_REF();
+                        stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
+                            exec_env, stringref_obj->pointer);
+                        PUSH_REF(stringview_wtf8_obj);
+                        HANDLE_OP_END();
                     }
-
+#endif
                     default:
                     {
                         wasm_set_exception(module, "unsupported opcode");

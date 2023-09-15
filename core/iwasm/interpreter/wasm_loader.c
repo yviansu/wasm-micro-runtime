@@ -8281,6 +8281,7 @@ fail:
 #define POP_V128() TEMPLATE_POP(V128)
 #define POP_FUNCREF() TEMPLATE_POP(FUNCREF)
 #define POP_EXTERNREF() TEMPLATE_POP(EXTERNREF)
+#define POP_STRINGREF() TEMPLATE_POP(STRINGREF)
 
 #if WASM_ENABLE_FAST_INTERP != 0
 
@@ -12253,7 +12254,7 @@ re_scan:
                     }
                     case WASM_OP_STRING_AS_WTF8:
                     {
-                        POP_REF(REF_TYPE_STRINGREF);
+                        POP_STRINGREF();
                         PUSH_REF(REF_TYPE_STRINGVIEWWTF8);
                         break;
                     }

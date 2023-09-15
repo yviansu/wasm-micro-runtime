@@ -421,11 +421,51 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     }
 
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
-    rtt_type->type_flag = WASM_TYPE_STRINGRF;
+    rtt_type->type_flag = WASM_TYPE_STRINGREF;
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->pointer = pointer;
 
     return stringref_obj;
+}
+
+WASMStringviewWTF8ObjectRef
+wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *pointer)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringview_wtf8_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF8Object)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF8;
+    stringview_wtf8_obj->header = (WASMObjectHeader)rtt_type;
+    stringview_wtf8_obj->pointer = pointer;
+
+    return stringview_wtf8_obj;
+}
+
+WASMStringviewWTF16ObjectRef
+wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *pointer)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringview_wtf16_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF16Object)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF16;
+    stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
+    stringview_wtf16_obj->pointer = pointer;
+
+    return stringview_wtf16_obj;
 }
 
 WASMObjectRef
@@ -574,7 +614,35 @@ wasm_obj_is_stringref_obj(WASMObjectRef obj)
         return false;
 
     rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
-    return rtt_type->type_flag == WASM_TYPE_STRINGRF ? true : false;
+    return rtt_type->type_flag == WASM_TYPE_STRINGREF ? true : false;
+}
+
+bool
+wasm_obj_is_stringview_wtf8_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF8 ? true : false;
+}
+
+bool
+wasm_obj_is_stringview_wtf16_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF16 ? true : false;
 }
 
 bool
