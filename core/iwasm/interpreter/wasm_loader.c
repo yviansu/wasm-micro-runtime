@@ -4692,11 +4692,15 @@ load_from_sections(WASMModule *module, WASMSection *sections,
                     return false;
                 break;
 #endif
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
             case SECTION_TYPE_STRINGREF:
                 if (!load_stringref_section(buf, buf_end, module, error_buf,
                                             error_buf_size))
                     return false;
                 break;
+#endif
+#endif
             default:
                 set_error_buf(error_buf, error_buf_size, "invalid section id");
                 return false;
@@ -12233,6 +12237,7 @@ re_scan:
                         break;
                     }
 
+#if WASM_ENABLE_STRINGREF != 0
                     case WASM_OP_STRING_NEW_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
@@ -12252,6 +12257,7 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGVIEWWTF8);
                         break;
                     }
+#endif
 
                     default:
                         set_error_buf_v(error_buf, error_buf_size,

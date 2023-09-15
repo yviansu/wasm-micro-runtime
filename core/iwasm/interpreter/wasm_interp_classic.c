@@ -14,7 +14,11 @@
 #include "../common/gc/gc_object.h"
 #include "mem_alloc.h"
 #if WASM_ENABLE_STRINGREF != 0
+#if WAMR_STRINGREF_IMPL_SOURCE == 0
 #include "../common/gc/string_object.h"
+#elif WAMR_STRINGREF_IMPL_SOURCE == 1
+/* TODO: include other file */
+#endif
 #endif
 #endif
 #if WASM_ENABLE_SHARED_MEMORY != 0
