@@ -2732,12 +2732,13 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = UTF8;
                         }
                         else if (opcode == WASM_OP_STRING_MEASURE_WTF8) {
-                            flag = WTF8;
+                            flag = LOSSY_UTF8;
                         }
 
                         string_obj = stringref_obj->pointer;
-                        total_byte_count = measure_wtf8(
-                            string_obj->string_bytes, string_obj->length, flag);
+                        total_byte_count =
+                            measure_wtf8(string_obj->string_bytes,
+                                         string_obj->length, NULL, NULL, flag);
 
                         PUSH_I32(total_byte_count);
                         HANDLE_OP_END();
@@ -2771,11 +2772,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
                     {
                         uint32 mem_idx, addr, pos, bytes, start_pos, end_pos,
-                            length, i;
+                            length, i, code_point_length, bytes_length;
                         uint8 *string_bytes;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
                         encoding_flag flag = WTF8;
+                        uint32 *code_points;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         bytes = POP_I32();
@@ -2806,25 +2808,21 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             stringview_wtf8_obj, start_pos, bytes);
                         length = end_pos - start_pos;
 
-                        /* TODO: change bytes to codepoints, then judge */
-                        for (i = 0; i < length; i++) {
-                            if (flag == WTF8
-                                || !is_isolated_surrogate(
-                                    *(string_bytes + i))) {
-                                *(uint8 *)(str_addr + i) = *(string_bytes + i);
+                        if (length > 0) {
+                            code_points =
+                                wasm_runtime_malloc(sizeof(uint32) * length);
+                            bytes_length = measure_wtf8(
+                                string_bytes + start_pos, length, code_points,
+                                &code_point_length, flag);
+                            if (bytes_length == -1) {
+                                wasm_set_exception(
+                                    module, "isolated surrogate is seen");
+                                goto got_exception;
                             }
-                            else {
-                                if (flag == UTF8) {
-                                    wasm_set_exception(
-                                        module, "isolated surrogate is seen");
-                                    goto got_exception;
-                                }
-                                else if (flag == LOSSY_UTF8) {
-                                    /* TODO: use multi 8 bytes to store 0xFFFD
-                                     */
-                                    *(uint16 *)(str_addr + i) = 0xFFFD;
-                                }
+                            for (i = 0; i < code_point_length; i++) {
+                                STORE_U32(str_addr, *(code_points + i));
                             }
+                            wasm_runtime_free(code_points);
                         }
 
                         PUSH_I32(end_pos);

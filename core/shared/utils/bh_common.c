@@ -350,9 +350,10 @@ encode_to_wtf8(int *code_points, size_t num_code_points, char **wtf8_string)
 }
 
 unsigned int
-measure_wtf8(char *bytes, unsigned int bytes_length, encoding_flag flag)
+measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
+             unsigned int *code_point_length, encoding_flag flag)
 {
-    unsigned int i = 0, total_byte_count = 0, byte_count;
+    unsigned int i = 0, j = 0, total_byte_count = 0, byte_count;
     uint32_t code_point;
     uint8_t byte, byte2, byte3, byte4;
 
@@ -387,6 +388,9 @@ measure_wtf8(char *bytes, unsigned int bytes_length, encoding_flag flag)
                 return -1;
             }
             else if (flag == WTF8) {
+                total_byte_count += byte_count;
+            }
+            else if (flag == LOSSY_UTF8) {
                 code_point = 0xFFFD;
                 total_byte_count += 3;
             }
@@ -394,6 +398,14 @@ measure_wtf8(char *bytes, unsigned int bytes_length, encoding_flag flag)
         else {
             total_byte_count += byte_count;
         }
+
+        if (code_points) {
+            code_points[j++] = code_point;
+        }
+    }
+
+    if (code_point_length) {
+        *code_point_length = j;
     }
     return total_byte_count;
 }
