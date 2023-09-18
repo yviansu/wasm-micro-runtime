@@ -66,6 +66,13 @@ bh_strdup(const char *s);
 char *
 wa_strdup(const char *s);
 
+typedef enum encoding_flag {
+    UTF8,
+    WTF8,
+    WTF16,
+    LOSSY_UTF8,
+} encoding_flag;
+
 bool
 is_lead_surrogate(uint16_t code_point);
 
@@ -82,6 +89,13 @@ align_wtf8_sequential(char *wtf8_string, unsigned int pos,
 unsigned int
 align_wtf8_reverse(char *wtf8_string, unsigned int pos,
                    unsigned int wtf8_length);
+
+void
+decode_well_formed_wtf8(char *wtf8_string, unsigned int wtf8_length,
+                        uint32 *code_points, unsigned int *code_point_length);
+
+unsigned int
+measure_wtf8(char *bytes, unsigned int bytes_length, encoding_flag flag);
 
 #ifdef __cplusplus
 }

@@ -12252,6 +12252,13 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }
+                    case WASM_OP_STRING_MEASURE_UTF8:
+                    case WASM_OP_STRING_MEASURE_WTF8:
+                    {
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         POP_STRINGREF();

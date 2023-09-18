@@ -2720,6 +2720,28 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
+                    case WASM_OP_STRING_MEASURE_UTF8:
+                    case WASM_OP_STRING_MEASURE_WTF8:
+                    {
+                        uint32 total_byte_count;
+                        encoding_flag flag = WTF8;
+
+                        stringref_obj = POP_REF();
+
+                        if (opcode == WASM_OP_STRING_MEASURE_UTF8) {
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_MEASURE_WTF8) {
+                            flag = WTF8;
+                        }
+
+                        string_obj = stringref_obj->pointer;
+                        total_byte_count = measure_wtf8(
+                            string_obj->string_bytes, string_obj->length, flag);
+
+                        PUSH_I32(total_byte_count);
+                        HANDLE_OP_END();
+                    }
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         stringref_obj = POP_REF();
@@ -2784,6 +2806,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             stringview_wtf8_obj, start_pos, bytes);
                         length = end_pos - start_pos;
 
+                        /* TODO: change bytes to codepoints, then judge */
                         for (i = 0; i < length; i++) {
                             if (flag == WTF8
                                 || !is_isolated_surrogate(

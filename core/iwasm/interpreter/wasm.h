@@ -176,13 +176,6 @@ typedef void *table_elem_type_t;
 #define WASM_TYPE_STRINGVIEWWTF8 4
 #define WASM_TYPE_STRINGVIEWWTF16 5
 
-typedef enum encoding_flag {
-    UTF8,
-    WTF8,
-    WTF16,
-    LOSSY_UTF8,
-} encoding_flag;
-
 typedef struct WASMModule WASMModule;
 typedef struct WASMFunction WASMFunction;
 typedef struct WASMGlobal WASMGlobal;
