@@ -66,8 +66,13 @@ bh_strdup(const char *s);
 char *
 wa_strdup(const char *s);
 
-bool
-utf8_to_wtf8(char *utf8_str, char *wtf8_str, uint32 length);
+unsigned int
+align_wtf8_sequential(char *wtf8_string, unsigned int pos,
+                      unsigned int wtf8_length);
+
+unsigned int
+align_wtf8_reverse(char *wtf8_string, unsigned int pos,
+                   unsigned int wtf8_length);
 
 #ifdef __cplusplus
 }

@@ -2723,9 +2723,41 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         stringref_obj = POP_REF();
+
                         stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
                             exec_env, stringref_obj->pointer);
+
                         PUSH_REF(stringview_wtf8_obj);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                    {
+                        uint32 pos, bytes, start_pos, next_pos,
+                            string_bytes_length;
+                        char *string_bytes;
+
+                        bytes = POP_I32();
+                        pos = POP_I32();
+                        stringview_wtf8_obj = POP_REF();
+
+                        string_obj = stringview_wtf8_obj->pointer;
+                        string_bytes = string_obj->string_bytes;
+                        string_bytes_length = string_obj->length;
+                        start_pos = align_wtf8_sequential(string_bytes, pos,
+                                                          string_bytes_length);
+                        if (bytes == 0) {
+                            next_pos = start_pos;
+                        }
+                        else if (bytes >= string_bytes_length - start_pos) {
+                            next_pos = string_bytes_length;
+                        }
+                        else {
+                            next_pos = align_wtf8_reverse(string_bytes,
+                                                          start_pos + bytes,
+                                                          string_bytes_length);
+                        }
+
+                        PUSH_I32(next_pos);
                         HANDLE_OP_END();
                     }
 #endif

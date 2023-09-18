@@ -617,7 +617,7 @@ typedef struct BlockAddr {
 } BlockAddr;
 
 typedef struct WASMString {
-    uint8 *string_byte;
+    char *string_bytes;
     uint32 length;
 } WASMString;
 

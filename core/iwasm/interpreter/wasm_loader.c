@@ -3872,7 +3872,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
 {
     const uint8 *p = buf, *p_end = buf_end;
     uint32 deferred_count, immediate_count, string_length, i, j;
-    uint8 *string_byte;
+    uint8 *string_bytes;
     uint64 total_size;
     WASMStringref *stringref;
     WASMString *string_obj;
@@ -3901,14 +3901,14 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
                 string_obj->length = string_length;
 
                 total_size = sizeof(uint8) * (uint64)string_length;
-                if (!(string_obj->string_byte = loader_malloc(
+                if (!(string_obj->string_bytes = loader_malloc(
                           total_size, error_buf, error_buf_size))) {
                     return false;
                 }
-                string_byte = string_obj->string_byte;
+                string_bytes = string_obj->string_bytes;
 
                 for (j = 0; j < string_length; j++) {
-                    *(string_byte + j) = read_uint8(p);
+                    *(string_bytes + j) = read_uint8(p);
                 }
             }
         }
@@ -12256,6 +12256,13 @@ re_scan:
                     {
                         POP_STRINGREF();
                         PUSH_REF(REF_TYPE_STRINGVIEWWTF8);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
                         break;
                     }
 #endif

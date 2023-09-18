@@ -10,7 +10,7 @@ wasm_string_obj_new(void *pointer, uint32 length, encoding_flag flag)
 {
     WASMString *string_obj;
     uint64 string_size;
-    uint32 i;
+    uint32 i, wtf8_length = 0;
     bool is_success;
 
     if (!(string_obj = wasm_runtime_malloc(sizeof(WASMString)))) {
@@ -18,26 +18,31 @@ wasm_string_obj_new(void *pointer, uint32 length, encoding_flag flag)
     }
 
     string_size = sizeof(uint8) * (uint64)length;
-    if (!(string_obj->string_byte = wasm_runtime_malloc(string_size))) {
+    if (!(string_obj->string_bytes = wasm_runtime_malloc(string_size))) {
         return NULL;
     }
-    string_obj->length = length;
 
-    if (flag == WTF8) {
+    if (flag == WTF8 || flag == UTF8) {
         for (i = 0; i < length; i++) {
-            *(string_obj->string_byte + i) = *(char *)(pointer + i);
+            *(string_obj->string_bytes + i) = *(char *)(pointer + i);
         }
+        wtf8_length = length;
     }
-    else if (flag == UTF8) {
-        is_success = utf8_to_wtf8((char *)pointer,
-                                  (char *)string_obj->string_byte, length);
-        if (!is_success) {
-            LOG_ERROR("error: Failed to transcode from UTF-8 to WTF-8.");
-        }
-    }
+
+    string_obj->length = wtf8_length;
 
     return string_obj;
 }
+
+// uint32
+// wasm_get_WTF8_byte_length(WASMString *string_obj)
+// {
+//     uint32 total_length, byte_length;
+
+//     total_length = string_obj->length;
+
+//     return str_len;
+// }
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
@@ -54,7 +59,7 @@ wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
     WASMString *string_obj = stringref_obj->pointer;
     uint32 str_len = string_obj->length;
 
-    strncpy(value, string_obj->string_byte, str_len);
+    strncpy(value, string_obj->string_bytes, str_len);
     value[str_len] = '\0';
 
     return true;
