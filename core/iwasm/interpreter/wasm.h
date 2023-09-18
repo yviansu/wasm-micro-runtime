@@ -180,6 +180,7 @@ typedef enum encoding_flag {
     UTF8,
     WTF8,
     WTF16,
+    LOSSY_UTF8,
 } encoding_flag;
 
 typedef struct WASMModule WASMModule;
@@ -617,7 +618,7 @@ typedef struct BlockAddr {
 } BlockAddr;
 
 typedef struct WASMString {
-    char *string_bytes;
+    uint16 *string_bytes;
     uint32 length;
 } WASMString;
 

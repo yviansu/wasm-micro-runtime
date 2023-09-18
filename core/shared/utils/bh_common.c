@@ -166,75 +166,39 @@ wa_strdup(const char *s)
     return s1;
 }
 
-int
-is_lead_surrogate(int code_point)
+bool
+is_lead_surrogate(uint16_t code_point)
 {
-    return (0xD800 <= code_point && code_point <= 0xDBFF);
-}
-
-int
-is_trail_surrogate(int code_point)
-{
-    return (0xDC00 <= code_point && code_point <= 0xDFFF);
-}
-
-size_t
-encode_to_wtf8(int *code_points, size_t num_code_points, char **wtf8_string)
-{
-    size_t result_length = 0;
-    int i;
-
-    for (i = 0; i < num_code_points; i++) {
-        int code_point = code_points[i];
-        if (is_lead_surrogate(code_point)) {
-            /* If is a lead surrogate code point, and next is a trail surrogate
-             * code point, reset value */
-            if (i < num_code_points - 1
-                && is_trail_surrogate(code_points[i + 1])) {
-                code_point = 0x10000 + ((code_point - 0xD800) << 10)
-                             + (code_points[i + 1] - 0xDC00);
-                i++;
-            }
-            else {
-                fprintf(stderr, "Invalid surrogate pair\n");
-                return 0;
-            }
-        }
-
-        if (0x0000 <= code_point && code_point <= 0x007F) {
-            /* U+0000 to U+007F */
-            (*wtf8_string)[result_length++] = code_point & 0x7F;
-        }
-        else if (0x0080 <= code_point && code_point <= 0x07FF) {
-            /* U+0080 to U+07FF */
-            (*wtf8_string)[result_length++] = 0xC0 | (code_point >> 6);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-        else if (0x0800 <= code_point && code_point <= 0xFFFF) {
-            /* U+0800 to U+FFFF */
-            (*wtf8_string)[result_length++] = 0xE0 | (code_point >> 12);
-            (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-        else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
-            /* U+10000 to U+10FFFF */
-            (*wtf8_string)[result_length++] = 0xF0 | (code_point >> 18);
-            (*wtf8_string)[result_length++] =
-                0x80 | ((code_point >> 12) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-        else {
-            fprintf(stderr, "Invalid code point\n");
-            return 0;
-        }
-    }
-
-    return result_length;
+    return (code_point >= 0xD800 && code_point <= 0xDBFF);
 }
 
 bool
-is_wtf8_codepoint_start(char *wtf8_string, uint32 pos)
+is_trail_surrogate(uint16_t code_point)
+{
+    return (code_point >= 0xDC00 && code_point <= 0xDFFF);
+}
+
+bool
+is_isolated_surrogate(uint16_t code_point)
+{
+    return (code_point >= 0xD800 && code_point <= 0xDFFF);
+}
+
+bool
+is_isolated_surrogate_pair(uint16_t lead, uint16_t trail)
+{
+    return is_isolated_surrogate(lead) && is_isolated_surrogate(trail);
+}
+
+bool
+is_isolated_surrogate_unpair(uint16_t code_point)
+{
+    return is_isolated_surrogate(code_point)
+           && !is_isolated_surrogate_pair(code_point, code_point);
+}
+
+bool
+is_wtf8_codepoint_start(char *wtf8_string, unsigned int pos)
 {
     return ((*(wtf8_string + pos)) & 0xC0) != 0x80;
 }

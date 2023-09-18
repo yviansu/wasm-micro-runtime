@@ -12265,6 +12265,17 @@ re_scan:
                         POP_REF(REF_TYPE_STRINGVIEWWTF8);
                         break;
                     }
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
+                        PUSH_I32();
+                        PUSH_I32();
+                    }
 #endif
 
                     default:

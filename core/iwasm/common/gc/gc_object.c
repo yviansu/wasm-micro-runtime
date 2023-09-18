@@ -468,6 +468,32 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *pointer)
     return stringview_wtf16_obj;
 }
 
+uint32
+wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
+                             uint32 pos, uint32 bytes)
+{
+    uint32 start_pos, next_pos, string_bytes_length;
+    char *string_bytes;
+    WASMString *string_obj;
+
+    string_obj = stringview_wtf8_obj->pointer;
+    string_bytes = string_obj->string_bytes;
+    string_bytes_length = string_obj->length;
+    start_pos = align_wtf8_sequential(string_bytes, pos, string_bytes_length);
+    if (bytes == 0) {
+        next_pos = start_pos;
+    }
+    else if (bytes >= string_bytes_length - start_pos) {
+        next_pos = string_bytes_length;
+    }
+    else {
+        next_pos = align_wtf8_reverse(string_bytes, start_pos + bytes,
+                                      string_bytes_length);
+    }
+
+    return next_pos;
+}
+
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(WASMExternrefObjectRef externref_obj)
 {

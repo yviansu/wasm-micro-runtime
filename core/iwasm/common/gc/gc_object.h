@@ -244,6 +244,10 @@ WASMStringviewWTF16ObjectRef
 wasm_stringview_wtf16_obj_new(struct WASMExecEnv *exec_env,
                               const void *pointer);
 
+uint32
+wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
+                             uint32 pos, uint32 bytes);
+
 /* Implementation of opcode extern.internalize */
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(const WASMExternrefObjectRef externref_obj);

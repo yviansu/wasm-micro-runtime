@@ -358,8 +358,8 @@ typedef enum WASMGCEXTOpcode {
     WASM_OP_STRINGVIEW_WTF8_ADVANCE = 0x91,         /* stringview_wtf8.advance */
     WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8 = 0x92,     /* stringview_wtf8.encode_utf8 */
     WASM_OP_STRINGVIEW_WTF8_SLICE = 0x93,           /* stringview_wtf8.slice */
-    WASM_OP_STRINGVIEW_ENCODE_LOSSY_UTF8 = 0x94,    /* stringview_wtf8.encode_lossy_utf8 */
-    WASM_OP_STRINGVIEW_ENCODE_WTF8 = 0x95,          /* stringview_wtf8.encode_wtf8 */
+    WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8 = 0x94,    /* stringview_wtf8.encode_lossy_utf8 */
+    WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8 = 0x95,          /* stringview_wtf8.encode_wtf8 */
 
     WASM_OP_STRING_AS_WTF16 = 0x98,                 /* string.as_wtf16 */
     WASM_OP_STRINGVIEW_WTF16_LENGTH = 0x99,         /* stringview_wtf16.length */

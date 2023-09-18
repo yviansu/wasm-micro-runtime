@@ -66,6 +66,15 @@ bh_strdup(const char *s);
 char *
 wa_strdup(const char *s);
 
+bool
+is_lead_surrogate(uint16_t code_point);
+
+bool
+is_trail_surrogate(uint16_t code_point);
+
+bool
+is_isolated_surrogate(uint16_t code_point);
+
 unsigned int
 align_wtf8_sequential(char *wtf8_string, unsigned int pos,
                       unsigned int wtf8_length);
