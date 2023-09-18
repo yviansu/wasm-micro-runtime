@@ -237,6 +237,13 @@ wasm_anyref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 WASMStringrefObjectRef
 wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
 
+WASMStringviewWTF8ObjectRef
+wasm_stringview_wtf8_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
+
+WASMStringviewWTF16ObjectRef
+wasm_stringview_wtf16_obj_new(struct WASMExecEnv *exec_env,
+                              const void *pointer);
+
 /* Implementation of opcode extern.internalize */
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(const WASMExternrefObjectRef externref_obj);
