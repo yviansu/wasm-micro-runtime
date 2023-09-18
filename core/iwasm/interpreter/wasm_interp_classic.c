@@ -2750,7 +2750,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         uint32 mem_idx, addr, pos, bytes, start_pos, end_pos,
                             length, i;
-                        char *string_bytes;
+                        uint8 *string_bytes;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
                         encoding_flag flag = WTF8;
@@ -2788,7 +2788,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             if (flag == WTF8
                                 || !is_isolated_surrogate(
                                     *(string_bytes + i))) {
-                                *(uint16 *)(str_addr + i) = *(string_bytes + i);
+                                *(uint8 *)(str_addr + i) = *(string_bytes + i);
                             }
                             else {
                                 if (flag == UTF8) {
@@ -2797,6 +2797,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                     goto got_exception;
                                 }
                                 else if (flag == LOSSY_UTF8) {
+                                    /* TODO: use multi 8 bytes to store 0xFFFD
+                                     */
                                     *(uint16 *)(str_addr + i) = 0xFFFD;
                                 }
                             }
@@ -2804,6 +2806,37 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         PUSH_I32(end_pos);
                         PUSH_I32(length);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_SLICE:
+                    {
+                        uint32 start, end, start_pos, end_pos;
+                        WASMString *new_string_obj;
+                        uint8 *string_bytes;
+
+                        end = POP_I32();
+                        start = POP_I32();
+                        stringview_wtf8_obj = POP_REF();
+
+                        start_pos = wasm_stringview_wtf8_advance(
+                            stringview_wtf8_obj, start, 0);
+                        end_pos = wasm_stringview_wtf8_advance(
+                            stringview_wtf8_obj, end, 0);
+                        string_obj = stringview_wtf8_obj->pointer;
+                        string_bytes = string_obj->string_bytes;
+
+                        if (end_pos <= start_pos) {
+                            new_string_obj = wasm_string_obj_new(NULL, 0, WTF8);
+                        }
+                        else {
+                            new_string_obj =
+                                wasm_string_obj_new(string_bytes + start_pos,
+                                                    end_pos - start_pos, WTF8);
+                        }
+                        stringref_obj =
+                            wasm_stringref_obj_new(exec_env, new_string_obj);
+
+                        PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
 #endif

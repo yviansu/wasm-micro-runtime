@@ -11,22 +11,27 @@ wasm_string_obj_new(void *pointer, uint32 length, encoding_flag flag)
     WASMString *string_obj;
     uint64 string_size;
     uint32 i, wtf8_length = 0;
-    bool is_success;
 
     if (!(string_obj = wasm_runtime_malloc(sizeof(WASMString)))) {
         return NULL;
     }
 
-    string_size = sizeof(uint8) * (uint64)length;
-    if (!(string_obj->string_bytes = wasm_runtime_malloc(string_size))) {
-        return NULL;
-    }
-
-    if (flag == WTF8 || flag == UTF8) {
-        for (i = 0; i < length; i++) {
-            *(string_obj->string_bytes + i) = *(char *)(pointer + i);
+    if (length > 0) {
+        string_size = sizeof(uint8) * (uint64)length;
+        if (!(string_obj->string_bytes = wasm_runtime_malloc(string_size))) {
+            return NULL;
         }
-        wtf8_length = length;
+
+        if (flag == WTF8 || flag == UTF8) {
+            for (i = 0; i < length; i++) {
+                *(string_obj->string_bytes + i) = *(char *)(pointer + i);
+            }
+            wtf8_length = length;
+        }
+    }
+    else {
+        wtf8_length = 0;
+        string_obj->string_bytes = NULL;
     }
 
     string_obj->length = wtf8_length;

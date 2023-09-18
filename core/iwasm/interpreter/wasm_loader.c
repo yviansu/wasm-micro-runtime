@@ -12275,6 +12275,15 @@ re_scan:
                         POP_REF(REF_TYPE_STRINGVIEWWTF8);
                         PUSH_I32();
                         PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_SLICE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
                     }
 #endif
 
