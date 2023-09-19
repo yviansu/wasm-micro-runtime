@@ -12259,6 +12259,15 @@ re_scan:
                         PUSH_I32();
                         break;
                     }
+                    case WASM_OP_STRING_ENCODE_UTF8:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF8:
+                    {
+                        POP_I32();
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         POP_STRINGREF();

@@ -96,7 +96,8 @@ decode_well_formed_wtf8(char *wtf8_string, unsigned int wtf8_length,
 
 unsigned int
 measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
-             unsigned int *code_point_length, encoding_flag flag);
+             unsigned int *code_point_length, uint8 *target_bytes,
+             encoding_flag flag);
 
 #ifdef __cplusplus
 }

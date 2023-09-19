@@ -351,9 +351,11 @@ encode_to_wtf8(int *code_points, size_t num_code_points, char **wtf8_string)
 
 unsigned int
 measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
-             unsigned int *code_point_length, encoding_flag flag)
+             unsigned int *code_point_length, uint8 *target_bytes,
+             encoding_flag flag)
 {
-    unsigned int i = 0, j = 0, total_byte_count = 0, byte_count;
+    unsigned int i = 0, j = 0, k = 0;
+    unsigned int total_target_byte_count = 0, target_byte_count;
     uint32_t code_point;
     uint8_t byte, byte2, byte3, byte4;
 
@@ -361,19 +363,19 @@ measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
         byte = bytes[i++];
         if (byte <= 0x7F) {
             code_point = byte;
-            byte_count = 1;
+            target_byte_count = 1;
         }
         else if (byte >= 0xC2 && byte <= 0xDF && i < bytes_length) {
             byte2 = bytes[i++];
             code_point = ((byte & 0x1F) << 6) + (byte2 & 0x3F);
-            byte_count = 2;
+            target_byte_count = 2;
         }
         else if (byte >= 0xE0 && byte <= 0xEF && i + 1 < bytes_length) {
             byte2 = bytes[i++];
             byte3 = bytes[i++];
             code_point =
                 ((byte & 0x0F) << 12) + ((byte2 & 0x3F) << 6) + (byte3 & 0x3F);
-            byte_count = 3;
+            target_byte_count = 3;
         }
         else if (byte >= 0xF0 && byte <= 0xF4 && i + 2 < bytes_length) {
             byte2 = bytes[i++];
@@ -381,22 +383,42 @@ measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
             byte4 = bytes[i++];
             code_point = ((byte & 0x07) << 18) + ((byte2 & 0x3F) << 12)
                          + ((byte3 & 0x3F) << 6) + (byte4 & 0x3F);
-            byte_count = 4;
+            target_byte_count = 4;
         }
         if (is_isolated_surrogate(code_point)) {
             if (flag == UTF8) {
                 return -1;
             }
             else if (flag == WTF8) {
-                total_byte_count += byte_count;
+                if (target_bytes) {
+                    for (k = 0; k < target_byte_count; k++) {
+                        *(target_bytes + k + total_target_byte_count) =
+                            *(bytes + i - target_byte_count + k);
+                    }
+                }
+                total_target_byte_count += target_byte_count;
             }
             else if (flag == LOSSY_UTF8) {
                 code_point = 0xFFFD;
-                total_byte_count += 3;
+                if (target_bytes) {
+                    *(target_bytes + total_target_byte_count) =
+                        0xE0 | (code_point >> 12);
+                    *(target_bytes + total_target_byte_count + 1) =
+                        0x80 | ((code_point >> 6) & 0x3F);
+                    *(target_bytes + total_target_byte_count + 2) =
+                        0x80 | (code_point & 0x3F);
+                }
+                total_target_byte_count += 3;
             }
         }
         else {
-            total_byte_count += byte_count;
+            if (target_bytes) {
+                for (k = 0; k < target_byte_count; k++) {
+                    *(target_bytes + k + total_target_byte_count) =
+                        *(bytes + i - target_byte_count + k);
+                }
+            }
+            total_target_byte_count += target_byte_count;
         }
 
         if (code_points) {
@@ -407,5 +429,6 @@ measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
     if (code_point_length) {
         *code_point_length = j;
     }
-    return total_byte_count;
+
+    return total_target_byte_count;
 }
