@@ -6,8 +6,7 @@
 #include "gc_object.h"
 
 WASMString *
-wasm_string_obj_new(void *pointer, uint32 length, bool is_const,
-                    encoding_flag flag);
+wasm_string_obj_new(void *pointer, uint32 length, bool is_const);
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);

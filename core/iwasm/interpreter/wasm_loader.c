@@ -12240,6 +12240,7 @@ re_scan:
 
 #if WASM_ENABLE_STRINGREF != 0
                     case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
                         POP_I32();

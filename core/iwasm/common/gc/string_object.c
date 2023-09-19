@@ -6,8 +6,7 @@
 #include "string_object.h"
 
 WASMString *
-wasm_string_obj_new(void *pointer, uint32 length, bool is_const,
-                    encoding_flag flag)
+wasm_string_obj_new(void *pointer, uint32 length, bool is_const)
 {
     WASMString *string_obj;
     uint64 string_size;
@@ -23,12 +22,10 @@ wasm_string_obj_new(void *pointer, uint32 length, bool is_const,
             return NULL;
         }
 
-        if (flag == WTF8 || flag == UTF8) {
-            for (i = 0; i < length; i++) {
-                *(string_obj->string_bytes + i) = *(char *)(pointer + i);
-            }
-            wtf8_length = length;
+        for (i = 0; i < length; i++) {
+            *(string_obj->string_bytes + i) = *(int8 *)(pointer + i);
         }
+        wtf8_length = length;
     }
     else {
         wtf8_length = 0;

@@ -2678,15 +2678,17 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
 #if WASM_ENABLE_STRINGREF != 0
                     case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
-                        uint32 mem_idx, addr, bytes;
+                        uint32 mem_idx, addr, bytes_length, target_bytes_length;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
                         encoding_flag flag = WTF8;
+                        uint8 *target_bytes;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
-                        bytes = POP_I32();
+                        bytes_length = POP_I32();
                         addr = POP_I32();
 
                         memory_inst = module->memories[mem_idx];
@@ -2696,13 +2698,38 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = UTF8;
                         }
                         else if (opcode == WASM_OP_STRING_NEW_WTF8) {
-                            flag = WTF8;
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_NEW_LOSSY_UTF8) {
+                            flag = LOSSY_UTF8;
                         }
 
-                        string_obj =
-                            wasm_string_obj_new(str_addr, bytes, false, flag);
+                        if (bytes_length > 0) {
+                            target_bytes = wasm_runtime_malloc(
+                                sizeof(uint8) * bytes_length * 4);
+                        }
+
+                        target_bytes_length =
+                            decode_wtf8(str_addr, bytes_length, NULL, NULL,
+                                        target_bytes, flag);
+
+                        if (target_bytes_length == -1) {
+                            if (target_bytes) {
+                                wasm_runtime_free(target_bytes);
+                            }
+                            wasm_set_exception(module,
+                                               "isolated surrogate is seen");
+                            goto got_exception;
+                        }
+
+                        string_obj = wasm_string_obj_new(
+                            target_bytes, target_bytes_length, false);
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, string_obj);
+
+                        if (target_bytes) {
+                            wasm_runtime_free(target_bytes);
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2857,7 +2884,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
 
                         target_string_obj = wasm_string_obj_new(
-                            target_bytes, target_bytes_length, false, flag);
+                            target_bytes, target_bytes_length, false);
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, target_string_obj);
 
@@ -3019,12 +3046,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         if (end_pos <= start_pos) {
                             new_string_obj =
-                                wasm_string_obj_new(NULL, 0, false, WTF8);
+                                wasm_string_obj_new(NULL, 0, false);
                         }
                         else {
-                            new_string_obj = wasm_string_obj_new(
-                                string_bytes + start_pos, end_pos - start_pos,
-                                false, WTF8);
+                            new_string_obj =
+                                wasm_string_obj_new(string_bytes + start_pos,
+                                                    end_pos - start_pos, false);
                         }
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, new_string_obj);
