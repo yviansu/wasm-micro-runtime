@@ -262,87 +262,84 @@ has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
     return true;
 }
 
-// uint32
-// encode_to_wtf8(uint32 *code_points,
-//              uint32 *code_points_length, uint8 *target_bytes,
-//              encoding_flag flag)
-// {
-//     size_t result_length = 0;
-//     int i;
+uint32
+encode_wtf8(uint32 *code_points, uint32 code_points_length, uint8 *target_bytes)
+{
+    uint32 target_bytes_count = 0, i = 0, code_point;
 
-//     for (i = 0; i < code_points_length; i++) {
-//         int code_point = code_points[i];
-//         if (is_high_surrogate(code_point)) {
-//             /* If is a high surrogate code point, and next is a low surrogate
-//              * code point, reset value */
-//             if (i < code_points_length - 1
-//                 && is_low_surrogate(code_points[i + 1])) {
-//                 code_point = 0x10000 + ((code_point - 0xD800) << 10)
-//                              + (code_points[i + 1] - 0xDC00);
-//                 i++;
-//             }
-//             else {
-//                 fprintf(stderr, "Invalid surrogate pair\n");
-//                 return 0;
-//             }
-//         }
+    for (i = 0; i < code_points_length; i++) {
+        code_point = code_points[i];
+        if (is_high_surrogate(code_point)) {
+            /* If is a high surrogate code point, and next is a low surrogate
+             * code point, reset value */
+            if (i < code_points_length - 1
+                && is_low_surrogate(code_points[i + 1])) {
+                code_point = 0x10000 + ((code_point - 0xD800) << 10)
+                             + (code_points[i + 1] - 0xDC00);
+                i++;
+            }
+            else {
+                fprintf(stderr, "Invalid surrogate pair\n");
+                return -1;
+            }
+        }
 
-//         if (0x0000 <= code_point && code_point <= 0x007F) {
-//             /* U+0000 to U+007F */
-//             (*wtf8_string)[result_length++] = code_point & 0x7F;
-//         }
-//         else if (0x0080 <= code_point && code_point <= 0x07FF) {
-//             /* U+0080 to U+07FF */
-//             (*wtf8_string)[result_length++] = 0xC0 | (code_point >> 6);
-//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-//         }
-//         else if (0x0800 <= code_point && code_point <= 0xFFFF) {
-//             /* U+0800 to U+FFFF */
-//             (*wtf8_string)[result_length++] = 0xE0 | (code_point >> 12);
-//             (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) &
-//             0x3F);
-//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-//         }
-//         else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
-//             /* U+10000 to U+10FFFF */
-//             (*wtf8_string)[result_length++] = 0xF0 | (code_point >> 18);
-//             (*wtf8_string)[result_length++] =
-//                 0x80 | ((code_point >> 12) & 0x3F);
-//             (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) &
-//             0x3F);
-//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-//         }
-//     }
+        if (0x0000 <= code_point && code_point <= 0x007F) {
+            /* U+0000 to U+007F */
+            target_bytes[target_bytes_count++] = code_point & 0x7F;
+        }
+        else if (0x0080 <= code_point && code_point <= 0x07FF) {
+            /* U+0080 to U+07FF */
+            target_bytes[target_bytes_count++] = 0xC0 | (code_point >> 6);
+            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+        }
+        else if (0x0800 <= code_point && code_point <= 0xFFFF) {
+            /* U+0800 to U+FFFF */
+            target_bytes[target_bytes_count++] = 0xE0 | (code_point >> 12);
+            target_bytes[target_bytes_count++] =
+                0x80 | ((code_point >> 6) & 0x3F);
+            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+        }
+        else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
+            /* U+10000 to U+10FFFF */
+            target_bytes[target_bytes_count++] = 0xF0 | (code_point >> 18);
+            target_bytes[target_bytes_count++] =
+                0x80 | ((code_point >> 12) & 0x3F);
+            target_bytes[target_bytes_count++] =
+                0x80 | ((code_point >> 6) & 0x3F);
+            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+        }
+    }
 
-//     return result_length;
-// }
+    return target_bytes_count;
+}
 
 uint32
 decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
             uint32 *code_points_length, uint8 *target_bytes, encoding_flag flag)
 {
     uint32 i = 0, j = 0, k = 0;
-    uint32 total_target_byte_count = 0, target_byte_count;
-    uint32_t code_point;
-    uint8_t byte, byte2, byte3, byte4;
+    uint32 total_target_bytes_count = 0, target_bytes_count;
+    uint32 code_point;
+    uint8 byte, byte2, byte3, byte4;
 
     while (i < bytes_length) {
         byte = bytes[i++];
         if (byte <= 0x7F) {
             code_point = byte;
-            target_byte_count = 1;
+            target_bytes_count = 1;
         }
         else if (byte >= 0xC2 && byte <= 0xDF && i < bytes_length) {
             byte2 = bytes[i++];
             code_point = ((byte & 0x1F) << 6) + (byte2 & 0x3F);
-            target_byte_count = 2;
+            target_bytes_count = 2;
         }
         else if (byte >= 0xE0 && byte <= 0xEF && i + 1 < bytes_length) {
             byte2 = bytes[i++];
             byte3 = bytes[i++];
             code_point =
                 ((byte & 0x0F) << 12) + ((byte2 & 0x3F) << 6) + (byte3 & 0x3F);
-            target_byte_count = 3;
+            target_bytes_count = 3;
         }
         else if (byte >= 0xF0 && byte <= 0xF4 && i + 2 < bytes_length) {
             byte2 = bytes[i++];
@@ -350,7 +347,7 @@ decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
             byte4 = bytes[i++];
             code_point = ((byte & 0x07) << 18) + ((byte2 & 0x3F) << 12)
                          + ((byte3 & 0x3F) << 6) + (byte4 & 0x3F);
-            target_byte_count = 4;
+            target_bytes_count = 4;
         }
         if (is_isolated_surrogate(code_point)) {
             if (flag == UTF8) {
@@ -358,34 +355,34 @@ decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
             }
             else if (flag == WTF8) {
                 if (target_bytes) {
-                    for (k = 0; k < target_byte_count; k++) {
-                        *(target_bytes + k + total_target_byte_count) =
-                            *(bytes + i - target_byte_count + k);
+                    for (k = 0; k < target_bytes_count; k++) {
+                        *(target_bytes + k + total_target_bytes_count) =
+                            *(bytes + i - target_bytes_count + k);
                     }
                 }
-                total_target_byte_count += target_byte_count;
+                total_target_bytes_count += target_bytes_count;
             }
             else if (flag == LOSSY_UTF8) {
                 code_point = 0xFFFD;
                 if (target_bytes) {
-                    *(target_bytes + total_target_byte_count) =
+                    *(target_bytes + total_target_bytes_count) =
                         0xE0 | (code_point >> 12);
-                    *(target_bytes + total_target_byte_count + 1) =
+                    *(target_bytes + total_target_bytes_count + 1) =
                         0x80 | ((code_point >> 6) & 0x3F);
-                    *(target_bytes + total_target_byte_count + 2) =
+                    *(target_bytes + total_target_bytes_count + 2) =
                         0x80 | (code_point & 0x3F);
                 }
-                total_target_byte_count += 3;
+                total_target_bytes_count += 3;
             }
         }
         else {
             if (target_bytes) {
-                for (k = 0; k < target_byte_count; k++) {
-                    *(target_bytes + k + total_target_byte_count) =
-                        *(bytes + i - target_byte_count + k);
+                for (k = 0; k < target_bytes_count; k++) {
+                    *(target_bytes + k + total_target_bytes_count) =
+                        *(bytes + i - target_bytes_count + k);
                 }
             }
-            total_target_byte_count += target_byte_count;
+            total_target_bytes_count += target_bytes_count;
         }
 
         if (code_points) {
@@ -397,5 +394,5 @@ decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
         *code_points_length = j;
     }
 
-    return total_target_byte_count;
+    return total_target_bytes_count;
 }

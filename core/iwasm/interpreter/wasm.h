@@ -613,6 +613,7 @@ typedef struct BlockAddr {
 typedef struct WASMString {
     uint8 *string_bytes;
     uint32 length;
+    bool is_const;
 } WASMString;
 
 typedef struct WASMStringref {
@@ -731,7 +732,7 @@ struct WASMModule {
     WASMTableSeg *table_segments;
     WASMDataSeg **data_segments;
     uint32 start_function;
-    WASMStringref *stringref;
+    WASMStringref *stringrefs;
 
     /* total global variable size */
     uint32 global_data_size;

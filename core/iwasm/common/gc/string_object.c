@@ -6,7 +6,8 @@
 #include "string_object.h"
 
 WASMString *
-wasm_string_obj_new(void *pointer, uint32 length, encoding_flag flag)
+wasm_string_obj_new(void *pointer, uint32 length, bool is_const,
+                    encoding_flag flag)
 {
     WASMString *string_obj;
     uint64 string_size;
@@ -35,19 +36,10 @@ wasm_string_obj_new(void *pointer, uint32 length, encoding_flag flag)
     }
 
     string_obj->length = wtf8_length;
+    string_obj->is_const = is_const;
 
     return string_obj;
 }
-
-// uint32
-// wasm_get_WTF8_byte_length(WASMString *string_obj)
-// {
-//     uint32 total_length, byte_length;
-
-//     total_length = string_obj->length;
-
-//     return str_len;
-// }
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)

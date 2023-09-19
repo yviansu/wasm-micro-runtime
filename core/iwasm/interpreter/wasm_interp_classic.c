@@ -2699,7 +2699,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = WTF8;
                         }
 
-                        string_obj = wasm_string_obj_new(str_addr, bytes, flag);
+                        string_obj =
+                            wasm_string_obj_new(str_addr, bytes, false, flag);
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, string_obj);
 
@@ -2713,9 +2714,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         read_leb_uint32(frame_ip, frame_ip_end, contents);
 
-                        string_obj = wasm_module->stringref->string_obj;
-                        stringref_obj = wasm_stringref_obj_new(
-                            exec_env, string_obj + contents);
+                        string_obj =
+                            ((wasm_module->stringrefs) + contents)->string_obj;
+                        stringref_obj =
+                            wasm_stringref_obj_new(exec_env, string_obj);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2792,6 +2794,87 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
 
                         PUSH_I32(target_bytes_length);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_CONCAT:
+                    {
+                        WASMStringrefObjectRef stringref_obj1, stringref_obj2;
+                        uint32 string_bytes_length1, string_bytes_length2,
+                            code_points_length1 = 0, code_points_length2 = 0,
+                            code_points_total_length, target_bytes_length = 0;
+                        uint8 *string_bytes1, *string_bytes2,
+                            *target_bytes = NULL;
+                        uint32 *code_points1, *code_points2, *code_points_total;
+                        encoding_flag flag = WTF8;
+                        WASMString *target_string_obj;
+
+                        stringref_obj2 = POP_REF();
+                        stringref_obj1 = POP_REF();
+
+                        string_bytes1 = ((WASMString *)stringref_obj1->pointer)
+                                            ->string_bytes;
+                        string_bytes2 = ((WASMString *)stringref_obj2->pointer)
+                                            ->string_bytes;
+                        string_bytes_length1 =
+                            ((WASMString *)stringref_obj1->pointer)->length;
+                        string_bytes_length2 =
+                            ((WASMString *)stringref_obj2->pointer)->length;
+
+                        if (string_bytes_length1 > 0) {
+                            code_points1 = wasm_runtime_malloc(
+                                sizeof(uint32) * string_bytes_length1);
+                            decode_wtf8(string_bytes1, string_bytes_length1,
+                                        code_points1, &code_points_length1,
+                                        NULL, flag);
+                        }
+                        if (string_bytes_length2 > 0) {
+                            code_points2 = wasm_runtime_malloc(
+                                sizeof(uint32) * string_bytes_length2);
+                            decode_wtf8(string_bytes2, string_bytes_length2,
+                                        code_points2, &code_points_length2,
+                                        NULL, flag);
+                        }
+
+                        code_points_total_length =
+                            code_points_length1 + code_points_length2;
+                        if (code_points_total_length > 0) {
+                            code_points_total = wasm_runtime_malloc(
+                                sizeof(uint32) * code_points_total_length);
+                            bh_memcpy_s(code_points_total,
+                                        sizeof(uint32) * code_points_length1,
+                                        code_points1,
+                                        sizeof(uint32) * code_points_length1);
+                            bh_memcpy_s(code_points_total + code_points_length1,
+                                        sizeof(uint32) * code_points_length2,
+                                        code_points2,
+                                        sizeof(uint32) * code_points_length2);
+
+                            target_bytes = wasm_runtime_malloc(
+                                sizeof(uint8) * code_points_total_length * 4);
+                            target_bytes_length = encode_wtf8(
+                                code_points_total, code_points_total_length,
+                                target_bytes);
+                        }
+
+                        target_string_obj = wasm_string_obj_new(
+                            target_bytes, target_bytes_length, false, flag);
+                        stringref_obj =
+                            wasm_stringref_obj_new(exec_env, target_string_obj);
+
+                        if (code_points1) {
+                            wasm_runtime_free(code_points1);
+                        }
+                        if (code_points2) {
+                            wasm_runtime_free(code_points2);
+                        }
+                        if (code_points_total) {
+                            wasm_runtime_free(code_points_total);
+                        }
+                        if (target_bytes) {
+                            wasm_runtime_free(target_bytes);
+                        }
+
+                        PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
                     case WASM_OP_STRING_AS_WTF8:
@@ -2896,12 +2979,13 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes = string_obj->string_bytes;
 
                         if (end_pos <= start_pos) {
-                            new_string_obj = wasm_string_obj_new(NULL, 0, WTF8);
+                            new_string_obj =
+                                wasm_string_obj_new(NULL, 0, false, WTF8);
                         }
                         else {
-                            new_string_obj =
-                                wasm_string_obj_new(string_bytes + start_pos,
-                                                    end_pos - start_pos, WTF8);
+                            new_string_obj = wasm_string_obj_new(
+                                string_bytes + start_pos, end_pos - start_pos,
+                                false, WTF8);
                         }
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, new_string_obj);

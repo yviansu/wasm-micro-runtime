@@ -80,6 +80,10 @@ uint32
 align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length);
 
 uint32
+encode_wtf8(uint32 *code_points, uint32 code_points_length,
+            uint8 *target_bytes);
+
+uint32
 decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
             uint32 *code_points_length, uint8 *target_bytes,
             encoding_flag flag);
