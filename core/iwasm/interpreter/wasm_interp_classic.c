@@ -2877,6 +2877,45 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
+                    case WASM_OP_STRING_EQ:
+                    {
+                        WASMStringrefObjectRef stringref_obj1, stringref_obj2;
+                        uint32 is_eq;
+
+                        stringref_obj2 = POP_REF();
+                        stringref_obj1 = POP_REF();
+
+                        is_eq = wasm_string_eq(stringref_obj1->pointer,
+                                               stringref_obj2->pointer);
+
+                        PUSH_I32(is_eq);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_IS_USV_SEQUENCE:
+                    {
+                        uint32 target_bytes_length, is_usv_sequence,
+                            string_bytes_length;
+                        uint8 *string_bytes;
+
+                        stringref_obj = POP_REF();
+
+                        string_obj = stringref_obj->pointer;
+                        string_bytes = string_obj->string_bytes;
+                        string_bytes_length = string_obj->length;
+
+                        target_bytes_length =
+                            decode_wtf8(string_bytes, string_bytes_length, NULL,
+                                        NULL, NULL, UTF8);
+                        if (target_bytes_length == -1) {
+                            is_usv_sequence = 0;
+                        }
+                        else {
+                            is_usv_sequence = 1;
+                        }
+
+                        PUSH_I32(is_usv_sequence);
+                        HANDLE_OP_END();
+                    }
                     case WASM_OP_STRING_AS_WTF8:
                     {
                         stringref_obj = POP_REF();

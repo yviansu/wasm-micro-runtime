@@ -14,3 +14,6 @@ wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
 
 bool
 wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value);
+
+uint32
+wasm_string_eq(void *string_obj1, void *string_obj2);

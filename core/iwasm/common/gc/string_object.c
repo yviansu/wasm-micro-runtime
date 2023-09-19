@@ -61,3 +61,35 @@ wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
 
     return true;
 }
+
+uint32
+wasm_string_eq(void *string_obj1, void *string_obj2)
+{
+    uint32 string_length1, string_length2, i;
+    uint8 *string_bytes1, *string_bytes2;
+
+    if (string_obj1 == string_obj2) {
+        return 1;
+    }
+
+    if (string_obj1 == NULL || string_obj2 == NULL) {
+        return 0;
+    }
+
+    string_length1 = ((WASMString *)string_obj1)->length;
+    string_length2 = ((WASMString *)string_obj2)->length;
+    string_bytes1 = ((WASMString *)string_obj1)->string_bytes;
+    string_bytes2 = ((WASMString *)string_obj2)->string_bytes;
+
+    if (string_length1 != string_length2) {
+        return 0;
+    }
+
+    for (i = 0; i < string_length1; i++) {
+        if (string_bytes1[i] != string_bytes2[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
