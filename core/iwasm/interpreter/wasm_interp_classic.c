@@ -2736,7 +2736,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
 
                         string_obj = stringref_obj->pointer;
-                        target_bytes_length = measure_wtf8(
+                        target_bytes_length = decode_wtf8(
                             string_obj->string_bytes, string_obj->length, NULL,
                             NULL, NULL, flag);
 
@@ -2779,8 +2779,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             target_bytes = wasm_runtime_malloc(
                                 sizeof(uint8) * string_bytes_length);
                             target_bytes_length =
-                                measure_wtf8(string_bytes, string_bytes_length,
-                                             NULL, NULL, target_bytes, flag);
+                                decode_wtf8(string_bytes, string_bytes_length,
+                                            NULL, NULL, target_bytes, flag);
                             if (target_bytes_length == -1) {
                                 wasm_set_exception(
                                     module, "isolated surrogate is seen");
@@ -2861,7 +2861,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         if (string_bytes_length > 0) {
                             target_bytes = wasm_runtime_malloc(
                                 sizeof(uint8) * string_bytes_length);
-                            target_bytes_length = measure_wtf8(
+                            target_bytes_length = decode_wtf8(
                                 string_bytes + start_pos, string_bytes_length,
                                 NULL, NULL, target_bytes, flag);
                             if (target_bytes_length == -1) {

@@ -73,31 +73,16 @@ typedef enum encoding_flag {
     LOSSY_UTF8,
 } encoding_flag;
 
-bool
-is_lead_surrogate(uint16_t code_point);
+uint32
+align_wtf8_sequential(uint8 *bytes, uint32 pos, uint32 bytes_length);
 
-bool
-is_trail_surrogate(uint16_t code_point);
+uint32
+align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length);
 
-bool
-is_isolated_surrogate(uint16_t code_point);
-
-unsigned int
-align_wtf8_sequential(char *wtf8_string, unsigned int pos,
-                      unsigned int wtf8_length);
-
-unsigned int
-align_wtf8_reverse(char *wtf8_string, unsigned int pos,
-                   unsigned int wtf8_length);
-
-void
-decode_well_formed_wtf8(char *wtf8_string, unsigned int wtf8_length,
-                        uint32 *code_points, unsigned int *code_point_length);
-
-unsigned int
-measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
-             unsigned int *code_point_length, uint8 *target_bytes,
-             encoding_flag flag);
+uint32
+decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
+            uint32 *code_points_length, uint8 *target_bytes,
+            encoding_flag flag);
 
 #ifdef __cplusplus
 }

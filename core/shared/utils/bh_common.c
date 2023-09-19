@@ -43,7 +43,7 @@ b_memcpy_wa(void *s1, unsigned int s1max, const void *s2, unsigned int n)
         buff = *(p);
         p_byte_read = ((char *)&buff);
 
-        /* read leading word */
+        /* read highing word */
         if ((char *)p <= src) {
             for (ps = src; ps < ((char *)p + 4); ps++) {
                 if (ps >= src + n) {
@@ -53,7 +53,7 @@ b_memcpy_wa(void *s1, unsigned int s1max, const void *s2, unsigned int n)
                 *dest++ = *p_byte_read;
             }
         }
-        /* read trailing word */
+        /* read lowing word */
         else if ((char *)p >= pb - 4) {
             for (ps = (char *)p; ps < src + n; ps++) {
                 *dest++ = *p_byte_read++;
@@ -167,86 +167,84 @@ wa_strdup(const char *s)
 }
 
 bool
-is_lead_surrogate(uint16_t code_point)
+is_high_surrogate(uint32 code_point)
 {
     return (code_point >= 0xD800 && code_point <= 0xDBFF);
 }
 
 bool
-is_trail_surrogate(uint16_t code_point)
+is_low_surrogate(uint32 code_point)
 {
     return (code_point >= 0xDC00 && code_point <= 0xDFFF);
 }
 
 bool
-is_isolated_surrogate(uint16_t code_point)
+is_isolated_surrogate(uint32 code_point)
 {
     return (code_point >= 0xD800 && code_point <= 0xDFFF);
 }
 
 bool
-is_isolated_surrogate_pair(uint16_t lead, uint16_t trail)
+is_isolated_surrogate_pair(uint32 high, uint32 low)
 {
-    return is_isolated_surrogate(lead) && is_isolated_surrogate(trail);
+    return is_isolated_surrogate(high) && is_isolated_surrogate(low);
 }
 
 bool
-is_isolated_surrogate_unpair(uint16_t code_point)
+is_isolated_surrogate_unpair(uint32 code_point)
 {
     return is_isolated_surrogate(code_point)
            && !is_isolated_surrogate_pair(code_point, code_point);
 }
 
 bool
-is_wtf8_codepoint_start(char *wtf8_string, unsigned int pos)
+is_wtf8_codepoint_start(uint8 *bytes, uint32 pos)
 {
-    return ((*(wtf8_string + pos)) & 0xC0) != 0x80;
+    return ((*(bytes + pos)) & 0xC0) != 0x80;
 }
 
-unsigned int
-align_wtf8_sequential(char *wtf8_string, unsigned int pos,
-                      unsigned int wtf8_length)
+uint32
+align_wtf8_sequential(uint8 *bytes, uint32 pos, uint32 bytes_length)
 {
-    if (pos >= wtf8_length) {
-        return wtf8_length;
+    if (pos >= bytes_length) {
+        return bytes_length;
     }
 
-    if (is_wtf8_codepoint_start(wtf8_string, pos)) {
+    if (is_wtf8_codepoint_start(bytes, pos)) {
         return pos;
     }
 
-    if (pos + 1 == wtf8_length) {
+    if (pos + 1 == bytes_length) {
         return pos + 1;
     }
-    if (is_wtf8_codepoint_start(wtf8_string, pos + 1)) {
+    if (is_wtf8_codepoint_start(bytes, pos + 1)) {
         return pos + 1;
     }
 
-    if (pos + 2 == wtf8_length) {
+    if (pos + 2 == bytes_length) {
         return pos + 2;
     }
-    if (is_wtf8_codepoint_start(wtf8_string, pos + 2)) {
+    if (is_wtf8_codepoint_start(bytes, pos + 2)) {
         return pos + 2;
     }
 
     return pos + 3;
 }
 
-unsigned int
-align_wtf8_reverse(char *wtf8_string, unsigned int pos,
-                   unsigned int wtf8_length)
+uint32
+align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length)
 {
-    bh_assert(pos < wtf8_length);
+    bh_assert(pos < bytes_length);
 
-    if (is_wtf8_codepoint_start(wtf8_string, pos)) {
+    if (is_wtf8_codepoint_start(bytes, pos)) {
         return pos;
     }
 
-    if (is_wtf8_codepoint_start(wtf8_string, pos - 1)) {
+    if (is_wtf8_codepoint_start(bytes, pos - 1)) {
         return pos - 1;
     }
 
-    if (is_wtf8_codepoint_start(wtf8_string, pos - 2)) {
+    if (is_wtf8_codepoint_start(bytes, pos - 2)) {
         return pos - 2;
     }
 
@@ -254,9 +252,9 @@ align_wtf8_reverse(char *wtf8_string, unsigned int pos,
 }
 
 bool
-has_isolated_surrogate(uint32 *code_points, unsigned int code_point_length)
+has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
 {
-    for (int i = 0; i < code_point_length; i++) {
+    for (int i = 0; i < code_points_length; i++) {
         if (is_isolated_surrogate(*(code_points + i))) {
             return false;
         }
@@ -264,98 +262,67 @@ has_isolated_surrogate(uint32 *code_points, unsigned int code_point_length)
     return true;
 }
 
-void
-decode_well_formed_wtf8(char *wtf8_string, unsigned int wtf8_length,
-                        uint32 *code_points, unsigned int *code_point_length)
+// uint32
+// encode_to_wtf8(uint32 *code_points,
+//              uint32 *code_points_length, uint8 *target_bytes,
+//              encoding_flag flag)
+// {
+//     size_t result_length = 0;
+//     int i;
+
+//     for (i = 0; i < code_points_length; i++) {
+//         int code_point = code_points[i];
+//         if (is_high_surrogate(code_point)) {
+//             /* If is a high surrogate code point, and next is a low surrogate
+//              * code point, reset value */
+//             if (i < code_points_length - 1
+//                 && is_low_surrogate(code_points[i + 1])) {
+//                 code_point = 0x10000 + ((code_point - 0xD800) << 10)
+//                              + (code_points[i + 1] - 0xDC00);
+//                 i++;
+//             }
+//             else {
+//                 fprintf(stderr, "Invalid surrogate pair\n");
+//                 return 0;
+//             }
+//         }
+
+//         if (0x0000 <= code_point && code_point <= 0x007F) {
+//             /* U+0000 to U+007F */
+//             (*wtf8_string)[result_length++] = code_point & 0x7F;
+//         }
+//         else if (0x0080 <= code_point && code_point <= 0x07FF) {
+//             /* U+0080 to U+07FF */
+//             (*wtf8_string)[result_length++] = 0xC0 | (code_point >> 6);
+//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
+//         }
+//         else if (0x0800 <= code_point && code_point <= 0xFFFF) {
+//             /* U+0800 to U+FFFF */
+//             (*wtf8_string)[result_length++] = 0xE0 | (code_point >> 12);
+//             (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) &
+//             0x3F);
+//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
+//         }
+//         else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
+//             /* U+10000 to U+10FFFF */
+//             (*wtf8_string)[result_length++] = 0xF0 | (code_point >> 18);
+//             (*wtf8_string)[result_length++] =
+//                 0x80 | ((code_point >> 12) & 0x3F);
+//             (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) &
+//             0x3F);
+//             (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
+//         }
+//     }
+
+//     return result_length;
+// }
+
+uint32
+decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
+            uint32 *code_points_length, uint8 *target_bytes, encoding_flag flag)
 {
-    unsigned int i = 0, j = 0;
-    while (i < wtf8_length) {
-        uint8_t byte = wtf8_string[i++];
-        if (byte <= 0x7F) {
-            code_points[j++] = byte;
-        }
-        else if (byte >= 0xC2 && byte <= 0xDF && i < wtf8_length) {
-            uint8_t byte2 = wtf8_string[i++];
-            uint32_t code_point = ((byte & 0x1F) << 6) + (byte2 & 0x3F);
-            code_points[j++] = code_point;
-        }
-        else if (byte >= 0xE0 && byte <= 0xEF && i + 1 < wtf8_length) {
-            uint8_t byte2 = wtf8_string[i++];
-            uint8_t byte3 = wtf8_string[i++];
-            uint32_t code_point =
-                ((byte & 0x0F) << 12) + ((byte2 & 0x3F) << 6) + (byte3 & 0x3F);
-            code_points[j++] = code_point;
-        }
-        else if (byte >= 0xF0 && byte <= 0xF4 && i + 2 < wtf8_length) {
-            uint8_t byte2 = wtf8_string[i++];
-            uint8_t byte3 = wtf8_string[i++];
-            uint8_t byte4 = wtf8_string[i++];
-            uint32_t code_point = ((byte & 0x07) << 18) + ((byte2 & 0x3F) << 12)
-                                  + ((byte3 & 0x3F) << 6) + (byte4 & 0x3F);
-            code_points[j++] = code_point;
-        }
-    }
-    *code_point_length = j;
-}
-
-size_t
-encode_to_wtf8(int *code_points, size_t num_code_points, char **wtf8_string)
-{
-    size_t result_length = 0;
-    int i;
-
-    for (i = 0; i < num_code_points; i++) {
-        int code_point = code_points[i];
-        if (is_lead_surrogate(code_point)) {
-            /* If is a lead surrogate code point, and next is a trail surrogate
-             * code point, reset value */
-            if (i < num_code_points - 1
-                && is_trail_surrogate(code_points[i + 1])) {
-                code_point = 0x10000 + ((code_point - 0xD800) << 10)
-                             + (code_points[i + 1] - 0xDC00);
-                i++;
-            }
-            else {
-                fprintf(stderr, "Invalid surrogate pair\n");
-                return 0;
-            }
-        }
-
-        if (0x0000 <= code_point && code_point <= 0x007F) {
-            /* U+0000 to U+007F */
-            (*wtf8_string)[result_length++] = code_point & 0x7F;
-        }
-        else if (0x0080 <= code_point && code_point <= 0x07FF) {
-            /* U+0080 to U+07FF */
-            (*wtf8_string)[result_length++] = 0xC0 | (code_point >> 6);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-        else if (0x0800 <= code_point && code_point <= 0xFFFF) {
-            /* U+0800 to U+FFFF */
-            (*wtf8_string)[result_length++] = 0xE0 | (code_point >> 12);
-            (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-        else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
-            /* U+10000 to U+10FFFF */
-            (*wtf8_string)[result_length++] = 0xF0 | (code_point >> 18);
-            (*wtf8_string)[result_length++] =
-                0x80 | ((code_point >> 12) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | ((code_point >> 6) & 0x3F);
-            (*wtf8_string)[result_length++] = 0x80 | (code_point & 0x3F);
-        }
-    }
-
-    return result_length;
-}
-
-unsigned int
-measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
-             unsigned int *code_point_length, uint8 *target_bytes,
-             encoding_flag flag)
-{
-    unsigned int i = 0, j = 0, k = 0;
-    unsigned int total_target_byte_count = 0, target_byte_count;
+    uint32 i = 0, j = 0, k = 0;
+    uint32 total_target_byte_count = 0, target_byte_count;
     uint32_t code_point;
     uint8_t byte, byte2, byte3, byte4;
 
@@ -426,8 +393,8 @@ measure_wtf8(char *bytes, unsigned int bytes_length, uint32 *code_points,
         }
     }
 
-    if (code_point_length) {
-        *code_point_length = j;
+    if (code_points_length) {
+        *code_points_length = j;
     }
 
     return total_target_byte_count;
