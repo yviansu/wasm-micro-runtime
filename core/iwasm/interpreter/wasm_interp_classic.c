@@ -3107,6 +3107,83 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
+                    case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF8_ARRAY:
+                    {
+                        uint32 start, end, bytes_length, arr_length,
+                            target_bytes_length;
+                        WASMArrayType *array_type;
+                        uint8 *arr_addr, *str_addr, *target_bytes;
+                        encoding_flag flag = WTF8;
+
+                        start = POP_I32();
+                        end = POP_I32();
+                        array_obj = POP_REF();
+
+                        array_type = wasm_obj_get_defined_type(array_obj);
+                        if (array_type->elem_type != PACKED_TYPE_I8) {
+                            wasm_set_exception(
+                                module, "generate stringref from array must "
+                                        "set its elem type to PACKED_TYPE_I8");
+                            goto got_exception;
+                        }
+
+                        arr_addr =
+                            (uint8 *)wasm_array_obj_first_elem_addr(array_obj);
+                        str_addr = arr_addr + start;
+                        arr_length = wasm_array_obj_length(array_obj);
+
+                        if (end < start || end > arr_length) {
+                            wasm_set_exception(
+                                module,
+                                "end should not less than start, and end "
+                                "should not greater than arr_length");
+                            goto got_exception;
+                        }
+                        bytes_length = end - start;
+
+                        if (opcode == WASM_OP_STRING_NEW_UTF8_ARRAY) {
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_NEW_WTF8_ARRAY) {
+                            flag = UTF8;
+                        }
+                        else if (opcode
+                                 == WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY) {
+                            flag = LOSSY_UTF8;
+                        }
+
+                        if (bytes_length > 0) {
+                            target_bytes = wasm_runtime_malloc(
+                                sizeof(uint8) * bytes_length * 4);
+                        }
+
+                        target_bytes_length =
+                            decode_wtf8(str_addr, bytes_length, NULL, NULL,
+                                        target_bytes, flag);
+
+                        if (target_bytes_length == -1) {
+                            if (target_bytes) {
+                                wasm_runtime_free(target_bytes);
+                            }
+                            wasm_set_exception(module,
+                                               "isolated surrogate is seen");
+                            goto got_exception;
+                        }
+
+                        string_obj = wasm_string_obj_new(
+                            target_bytes, target_bytes_length, false);
+                        stringref_obj =
+                            wasm_stringref_obj_new(exec_env, string_obj);
+
+                        if (target_bytes) {
+                            wasm_runtime_free(target_bytes);
+                        }
+
+                        PUSH_REF(stringref_obj);
+                        HANDLE_OP_END();
+                    }
 #endif
                     default:
                     {

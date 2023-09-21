@@ -12349,6 +12349,16 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }
+                    case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF8_ARRAY:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_ARRAYREF);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
 
 #endif
                     default:
