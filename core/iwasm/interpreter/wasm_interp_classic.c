@@ -1396,6 +1396,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMStringrefObjectRef stringref_obj;
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
     WASMString *string_obj;
+    WASMStringviewIterObjectRef stringview_iter_obj;
 #endif
 #endif
 
@@ -3044,17 +3045,64 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_obj = stringview_wtf8_obj->pointer;
                         string_bytes = string_obj->string_bytes;
 
-                        if (end_pos <= start_pos) {
-                            new_string_obj =
-                                wasm_string_obj_new(NULL, 0, false);
-                        }
-                        else {
-                            new_string_obj =
-                                wasm_string_obj_new(string_bytes + start_pos,
-                                                    end_pos - start_pos, false);
-                        }
+                        wasm_string_obj_new_by_pos(
+                            &new_string_obj, string_bytes, start_pos, end_pos);
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, new_string_obj);
+
+                        PUSH_REF(stringref_obj);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_AS_ITER:
+                    {
+                        stringref_obj = POP_REF();
+
+                        stringview_iter_obj = wasm_stringview_iter_obj_new(
+                            exec_env, stringref_obj->pointer, 0);
+
+                        PUSH_REF(stringview_iter_obj);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_NEXT:
+                    {
+                        uint32 code_point;
+
+                        stringview_iter_obj = POP_REF();
+
+                        code_point =
+                            wasm_stringview_iter_next(stringview_iter_obj);
+
+                        PUSH_I32(code_point);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_ADVANCE:
+                    case WASM_OP_STRINGVIEW_ITER_REWIND:
+                    {
+                        uint32 code_points_count, code_points_consumed;
+
+                        code_points_count = POP_I32();
+                        stringview_iter_obj = POP_REF();
+
+                        if (opcode == WASM_OP_STRINGVIEW_ITER_ADVANCE) {
+                            code_points_consumed = wasm_stringview_iter_advance(
+                                stringview_iter_obj, code_points_count);
+                        }
+                        else if (opcode == WASM_OP_STRINGVIEW_ITER_REWIND) {
+                            code_points_consumed = wasm_stringview_iter_rewind(
+                                stringview_iter_obj, code_points_count);
+                        }
+                        PUSH_I32(code_points_consumed);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_SLICE:
+                    {
+                        uint32 code_points_count;
+
+                        code_points_count = POP_I32();
+                        stringview_iter_obj = POP_REF();
+
+                        stringref_obj = wasm_stringview_iter_slice(
+                            exec_env, stringview_iter_obj, code_points_count);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();

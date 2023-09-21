@@ -121,7 +121,7 @@ typedef struct WASMStringviewWTF16Object {
 typedef struct WASMStringviewIterObject {
     WASMObjectHeader header;
     void *pointer;
-    int pos;
+    uint32 pos;
 } WASMStringviewIterObject, *WASMStringviewIterObjectRef;
 
 struct WASMExecEnv;
@@ -244,9 +244,21 @@ WASMStringviewWTF16ObjectRef
 wasm_stringview_wtf16_obj_new(struct WASMExecEnv *exec_env,
                               const void *pointer);
 
+WASMStringviewIterObjectRef
+wasm_stringview_iter_obj_new(struct WASMExecEnv *exec_env, const void *pointer,
+                             int32 pos);
+
 uint32
 wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
                              uint32 pos, uint32 bytes);
+uint32
+wasm_stringview_iter_rewind(WASMStringviewIterObjectRef stringview_iter_obj,
+                            uint32 code_points_count);
+
+WASMStringrefObjectRef
+wasm_stringview_iter_slice(struct WASMExecEnv *exec_env,
+                           WASMStringviewIterObjectRef stringview_iter_obj,
+                           uint32 code_points_count);
 
 /* Implementation of opcode extern.internalize */
 WASMObjectRef

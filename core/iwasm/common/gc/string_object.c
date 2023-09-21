@@ -6,7 +6,7 @@
 #include "string_object.h"
 
 WASMString *
-wasm_string_obj_new(void *pointer, uint32 length, bool is_const)
+wasm_string_obj_new(uint8 *target_bytes, uint32 length, bool is_const)
 {
     WASMString *string_obj;
     uint64 string_size;
@@ -23,7 +23,7 @@ wasm_string_obj_new(void *pointer, uint32 length, bool is_const)
         }
 
         for (i = 0; i < length; i++) {
-            *(string_obj->string_bytes + i) = *(int8 *)(pointer + i);
+            *(string_obj->string_bytes + i) = *(target_bytes + i);
         }
         wtf8_length = length;
     }
@@ -38,22 +38,46 @@ wasm_string_obj_new(void *pointer, uint32 length, bool is_const)
     return string_obj;
 }
 
+void
+wasm_string_obj_new_by_pos(WASMString **string_obj, uint8 *string_bytes,
+                           uint32 start_pos, uint32 end_pos)
+{
+    if (start_pos == end_pos) {
+        *string_obj = wasm_string_obj_new(NULL, 0, false);
+    }
+    else {
+        *string_obj = wasm_string_obj_new(string_bytes + start_pos,
+                                          end_pos - start_pos, false);
+    }
+}
+
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 {
-    WASMString *string_obj = stringref_obj->pointer;
-    uint32 str_len = string_obj->length;
+    WASMString *string_obj;
+    uint32 str_len;
+
+    string_obj = stringref_obj->pointer;
+    if (string_obj->length > 0) {
+        str_len = string_obj->length;
+    }
+    else {
+        str_len = 0;
+    }
 
     return str_len;
 }
 
-bool
+void
 wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value)
 {
     WASMString *string_obj = stringref_obj->pointer;
-    uint32 str_len = string_obj->length;
+    uint32 str_len;
 
-    strncpy(value, string_obj->string_bytes, str_len);
+    str_len = wasm_get_stringref_length(stringref_obj);
+    if (str_len) {
+        strncpy(value, string_obj->string_bytes, str_len);
+    }
     value[str_len] = '\0';
 
     return true;

@@ -6,12 +6,16 @@
 #include "gc_object.h"
 
 WASMString *
-wasm_string_obj_new(void *pointer, uint32 length, bool is_const);
+wasm_string_obj_new(uint8 *target_bytes, uint32 length, bool is_const);
+
+void
+wasm_string_obj_new_by_pos(WASMString **string_obj, uint8 *string_bytes,
+                           uint32 start_pos, uint32 end_pos);
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
 
-bool
+void
 wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value);
 
 uint32

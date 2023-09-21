@@ -175,6 +175,7 @@ typedef void *table_elem_type_t;
 #define WASM_TYPE_STRINGREF 3
 #define WASM_TYPE_STRINGVIEWWTF8 4
 #define WASM_TYPE_STRINGVIEWWTF16 5
+#define WASM_TYPE_STRINGVIEWITER 6
 
 typedef struct WASMModule WASMModule;
 typedef struct WASMFunction WASMFunction;

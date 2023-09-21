@@ -12322,8 +12322,35 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }
-#endif
+                    case WASM_OP_STRING_AS_ITER:
+                    {
+                        POP_STRINGREF();
+                        PUSH_REF(REF_TYPE_STRINGVIEWITER);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_NEXT:
+                    {
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_ADVANCE:
+                    case WASM_OP_STRINGVIEW_ITER_REWIND:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_SLICE:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
 
+#endif
                     default:
                         set_error_buf_v(error_buf, error_buf_size,
                                         "%s %02x %02x", "unsupported opcode",
