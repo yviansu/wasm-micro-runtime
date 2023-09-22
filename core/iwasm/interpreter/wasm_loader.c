@@ -12359,7 +12359,16 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }
-
+                    case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_ARRAYREF);
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
 #endif
                     default:
                         set_error_buf_v(error_buf, error_buf_size,

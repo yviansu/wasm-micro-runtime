@@ -3117,8 +3117,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         uint8 *arr_addr, *str_addr, *target_bytes;
                         encoding_flag flag = WTF8;
 
-                        start = POP_I32();
                         end = POP_I32();
+                        start = POP_I32();
                         array_obj = POP_REF();
 
                         array_type = wasm_obj_get_defined_type(array_obj);
@@ -3182,6 +3182,61 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
 
                         PUSH_REF(stringref_obj);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
+                    {
+                        uint32 start, bytes_length, arr_length,
+                            target_bytes_length;
+                        WASMArrayType *array_type;
+                        uint8 *arr_addr;
+                        encoding_flag flag = WTF8;
+
+                        start = POP_I32();
+                        array_obj = POP_REF();
+                        stringref_obj = POP_REF();
+
+                        if (opcode == WASM_OP_STRING_ENCODE_UTF8_ARRAY) {
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_ENCODE_WTF8_ARRAY) {
+                            flag = UTF8;
+                        }
+                        else if (opcode
+                                 == WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY) {
+                            flag = LOSSY_UTF8;
+                        }
+
+                        array_type = wasm_obj_get_defined_type(array_obj);
+                        if (array_type->elem_type != PACKED_TYPE_I8) {
+                            wasm_set_exception(
+                                module, "array's type must be PACKED_TYPE_I8");
+                            goto got_exception;
+                        }
+
+                        string_obj = stringref_obj->pointer;
+                        target_bytes_length = decode_wtf8(
+                            string_obj->string_bytes + start,
+                            string_obj->length - start, NULL, NULL, NULL, flag);
+
+                        arr_addr =
+                            (uint8 *)wasm_array_obj_first_elem_addr(array_obj);
+                        arr_length = wasm_array_obj_length(array_obj);
+
+                        if (target_bytes_length > arr_length) {
+                            wasm_set_exception(module,
+                                               "there is not space for the "
+                                               "code units in the array");
+                            goto got_exception;
+                        }
+
+                        bh_memcpy_s(arr_addr, target_bytes_length,
+                                    string_obj->string_bytes + start,
+                                    target_bytes_length);
+
+                        PUSH_I32(target_bytes_length);
                         HANDLE_OP_END();
                     }
 #endif
