@@ -254,7 +254,9 @@ align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length)
 bool
 has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
 {
-    for (int i = 0; i < code_points_length; i++) {
+    uint32 i;
+
+    for (i = 0; i < code_points_length; i++) {
         if (is_isolated_surrogate(*(code_points + i))) {
             return false;
         }
@@ -262,10 +264,12 @@ has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
     return true;
 }
 
-uint32
-encode_wtf8(uint32 *code_points, uint32 code_points_length, uint8 *target_bytes)
+void
+decode_codepoints(uint32 *code_points, uint32 code_points_length,
+                  uint8 *target_bytes, int32 *target_bytes_length)
 {
-    uint32 target_bytes_count = 0, i = 0, code_point;
+    int32 target_bytes_count = 0;
+    uint32 i, code_point;
 
     for (i = 0; i < code_points_length; i++) {
         code_point = code_points[i];
@@ -279,47 +283,71 @@ encode_wtf8(uint32 *code_points, uint32 code_points_length, uint8 *target_bytes)
                 i++;
             }
             else {
-                fprintf(stderr, "Invalid surrogate pair\n");
-                return -1;
+                if (target_bytes_length) {
+                    *target_bytes_length = -1;
+                }
+                return;
             }
         }
 
-        if (0x0000 <= code_point && code_point <= 0x007F) {
+        if (code_point <= 0x007F) {
             /* U+0000 to U+007F */
-            target_bytes[target_bytes_count++] = code_point & 0x7F;
+            if (target_bytes) {
+                target_bytes[target_bytes_count++] = code_point & 0x7F;
+            }
+            else {
+                target_bytes_count += 1;
+            }
         }
         else if (0x0080 <= code_point && code_point <= 0x07FF) {
             /* U+0080 to U+07FF */
-            target_bytes[target_bytes_count++] = 0xC0 | (code_point >> 6);
-            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            if (target_bytes) {
+                target_bytes[target_bytes_count++] = 0xC0 | (code_point >> 6);
+                target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            }
+            else {
+                target_bytes_count += 2;
+            }
         }
         else if (0x0800 <= code_point && code_point <= 0xFFFF) {
             /* U+0800 to U+FFFF */
-            target_bytes[target_bytes_count++] = 0xE0 | (code_point >> 12);
-            target_bytes[target_bytes_count++] =
-                0x80 | ((code_point >> 6) & 0x3F);
-            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            if (target_bytes) {
+                target_bytes[target_bytes_count++] = 0xE0 | (code_point >> 12);
+                target_bytes[target_bytes_count++] =
+                    0x80 | ((code_point >> 6) & 0x3F);
+                target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            }
+            else {
+                target_bytes_count += 3;
+            }
         }
         else if (0x10000 <= code_point && code_point <= 0x10FFFF) {
             /* U+10000 to U+10FFFF */
-            target_bytes[target_bytes_count++] = 0xF0 | (code_point >> 18);
-            target_bytes[target_bytes_count++] =
-                0x80 | ((code_point >> 12) & 0x3F);
-            target_bytes[target_bytes_count++] =
-                0x80 | ((code_point >> 6) & 0x3F);
-            target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            if (target_bytes) {
+                target_bytes[target_bytes_count++] = 0xF0 | (code_point >> 18);
+                target_bytes[target_bytes_count++] =
+                    0x80 | ((code_point >> 12) & 0x3F);
+                target_bytes[target_bytes_count++] =
+                    0x80 | ((code_point >> 6) & 0x3F);
+                target_bytes[target_bytes_count++] = 0x80 | (code_point & 0x3F);
+            }
+            else {
+                target_bytes_count += 4;
+            }
         }
     }
 
-    return target_bytes_count;
+    if (target_bytes_length) {
+        *target_bytes_length = target_bytes_count;
+    }
 }
 
 uint32
-decode_wtf8_one_codepoint(uint8 *bytes, uint32 pos, uint32 bytes_length,
-                          uint32 *code_point)
+decode_bytes_to_one_codepoint(uint8 *bytes, uint32 pos, uint32 bytes_length,
+                              uint32 *code_point)
 {
     uint8 byte, byte2, byte3, byte4;
-    uint32 target_bytes_count;
+    uint32 target_bytes_count = 0;
 
     byte = bytes[pos++];
     if (byte <= 0x7F) {
@@ -358,22 +386,25 @@ decode_wtf8_one_codepoint(uint8 *bytes, uint32 pos, uint32 bytes_length,
     return target_bytes_count;
 }
 
-uint32
-decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
-            uint32 *code_points_length, uint8 *target_bytes, encoding_flag flag)
+void
+decode_bytes(uint8 *bytes, int32 bytes_length, uint32 *code_points,
+             int32 *code_points_length, uint8 *target_bytes,
+             int32 *target_bytes_length, encoding_flag flag)
 {
-    uint32 i = 0, j = 0, k = 0;
-    uint32 total_target_bytes_count = 0, target_bytes_count;
+    int32 i = 0, j = 0, k = 0;
+    int32 total_target_bytes_count = 0, target_bytes_count;
     uint32 code_point;
-    uint8 byte, byte2, byte3, byte4;
 
     while (i < bytes_length) {
         target_bytes_count =
-            decode_wtf8_one_codepoint(bytes, i, bytes_length, &code_point);
+            decode_bytes_to_one_codepoint(bytes, i, bytes_length, &code_point);
         i += target_bytes_count;
         if (is_isolated_surrogate(code_point)) {
             if (flag == UTF8) {
-                return -1;
+                if (target_bytes_length) {
+                    *target_bytes_length = -1;
+                }
+                return;
             }
             else if (flag == WTF8) {
                 if (target_bytes) {
@@ -410,11 +441,149 @@ decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
         if (code_points) {
             code_points[j++] = code_point;
         }
+        else {
+            j += 1;
+        }
     }
 
     if (code_points_length) {
         *code_points_length = j;
     }
 
-    return total_target_bytes_count;
+    if (target_bytes_length) {
+        *target_bytes_length = total_target_bytes_count;
+    }
+}
+
+int32
+calculate_encoded_length_with_codepoints(uint32 *code_points,
+                                         uint32 code_points_length)
+{
+    int32 target_bytes_length;
+
+    decode_codepoints(code_points, code_points_length, NULL,
+                      &target_bytes_length);
+
+    return target_bytes_length;
+}
+
+uint8 *
+encode_bytes_with_codepoints(uint32 *code_points, uint32 code_points_length,
+                             int32 *target_bytes_length)
+{
+    uint8 *target_bytes;
+
+    *target_bytes_length = calculate_encoded_length_with_codepoints(
+        code_points, code_points_length);
+
+    if (*target_bytes_length > 0) {
+        if (!(target_bytes = wasm_runtime_malloc(sizeof(uint8)
+                                                 * (*target_bytes_length)))) {
+            return NULL;
+        }
+        /* get target bytes */
+        decode_codepoints(code_points, code_points_length, target_bytes, NULL);
+    }
+    else {
+        target_bytes = NULL;
+    }
+
+    return target_bytes;
+}
+
+int32
+calculate_encoded_length_with_flag(uint8 *bytes, int32 bytes_length,
+                                   encoding_flag flag)
+{
+    int32 target_bytes_length;
+
+    decode_bytes(bytes, bytes_length, NULL, NULL, NULL, &target_bytes_length,
+                 flag);
+
+    return target_bytes_length;
+}
+
+uint8 *
+encode_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                       int32 *target_bytes_length, encoding_flag flag)
+{
+    uint8 *target_bytes;
+
+    /* get target bytes length */
+    *target_bytes_length =
+        calculate_encoded_length_with_flag(bytes, bytes_length, flag);
+
+    if (*target_bytes_length > 0) {
+        if (!(target_bytes = wasm_runtime_malloc(sizeof(uint8)
+                                                 * (*target_bytes_length)))) {
+            return NULL;
+        }
+        /* get target bytes */
+        decode_bytes(bytes, bytes_length, NULL, NULL, target_bytes, NULL, flag);
+    }
+    else {
+        target_bytes = NULL;
+    }
+
+    return target_bytes;
+}
+
+uint32 *
+encode_codepoints_with_flag(uint8 *bytes, int32 bytes_length,
+                            int32 *code_points_length, encoding_flag flag)
+{
+    uint32 *code_points;
+
+    /* get code points length */
+    decode_bytes(bytes, bytes_length, NULL, code_points_length, NULL, NULL,
+                 flag);
+
+    if (*code_points_length > 0) {
+        if (!(code_points = wasm_runtime_malloc(sizeof(uint32)
+                                                * (*code_points_length)))) {
+            return NULL;
+        }
+        /* get code points */
+        decode_bytes(bytes, bytes_length, code_points, NULL, NULL, NULL, flag);
+    }
+    else {
+        code_points = NULL;
+    }
+    return code_points;
+}
+
+uint8 *
+concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
+             int32 bytes_length2, int32 *bytes_length_total, encoding_flag flag)
+{
+    uint32 *code_points1, *code_points2, *code_points_total;
+    int32 code_points_length1, code_points_length2, code_points_total_length;
+    uint8 *target_bytes;
+
+    code_points1 = encode_codepoints_with_flag(bytes1, bytes_length1,
+                                               &code_points_length1, flag);
+    code_points2 = encode_codepoints_with_flag(bytes2, bytes_length2,
+                                               &code_points_length2, flag);
+    code_points_total_length = code_points_length1 + code_points_length2;
+    if (code_points_total_length > 0) {
+        code_points_total =
+            wasm_runtime_malloc(sizeof(uint32) * code_points_total_length);
+        bh_memcpy_s(code_points_total, sizeof(uint32) * code_points_length1,
+                    code_points1, sizeof(uint32) * code_points_length1);
+        bh_memcpy_s(code_points_total + code_points_length1,
+                    sizeof(uint32) * code_points_length2, code_points2,
+                    sizeof(uint32) * code_points_length2);
+    }
+    target_bytes = encode_bytes_with_codepoints(
+        code_points_total, code_points_total_length, bytes_length_total);
+    if (code_points1) {
+        wasm_runtime_free(code_points1);
+    }
+    if (code_points2) {
+        wasm_runtime_free(code_points2);
+    }
+    if (code_points_total) {
+        wasm_runtime_free(code_points_total);
+    }
+    return target_bytes;
 }

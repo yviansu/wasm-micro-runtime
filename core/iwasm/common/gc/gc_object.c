@@ -409,7 +409,7 @@ wasm_anyref_obj_new(WASMExecEnv *exec_env, const void *host_obj)
 }
 
 WASMStringrefObjectRef
-wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
+wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringrefObjectRef stringref_obj;
@@ -423,13 +423,13 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *pointer)
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGREF;
     stringref_obj->header = (WASMObjectHeader)rtt_type;
-    stringref_obj->pointer = pointer;
+    stringref_obj->str_obj = str_obj;
 
     return stringref_obj;
 }
 
 WASMStringviewWTF8ObjectRef
-wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *pointer)
+wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
@@ -443,13 +443,13 @@ wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *pointer)
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF8;
     stringview_wtf8_obj->header = (WASMObjectHeader)rtt_type;
-    stringview_wtf8_obj->pointer = pointer;
+    stringview_wtf8_obj->str_obj = str_obj;
 
     return stringview_wtf8_obj;
 }
 
 WASMStringviewWTF16ObjectRef
-wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *pointer)
+wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringviewWTF16ObjectRef stringview_wtf16_obj;
@@ -463,13 +463,13 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *pointer)
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF16;
     stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
-    stringview_wtf16_obj->pointer = pointer;
+    stringview_wtf16_obj->str_obj = str_obj;
 
     return stringview_wtf16_obj;
 }
 
 WASMStringviewIterObjectRef
-wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *pointer,
+wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
                              int32 pos)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
@@ -484,7 +484,7 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *pointer,
     rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWITER;
     stringview_iter_obj->header = (WASMObjectHeader)rtt_type;
-    stringview_iter_obj->pointer = pointer;
+    stringview_iter_obj->str_obj = str_obj;
     stringview_iter_obj->pos = pos;
 
     return stringview_iter_obj;
@@ -496,9 +496,9 @@ wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
 {
     uint32 start_pos, next_pos, string_bytes_length;
     uint8 *string_bytes;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 
-    string_obj = stringview_wtf8_obj->pointer;
+    string_obj = stringview_wtf8_obj->str_obj;
     string_bytes = string_obj->string_bytes;
     string_bytes_length = string_obj->length;
     start_pos = align_wtf8_sequential(string_bytes, pos, string_bytes_length);
@@ -521,9 +521,9 @@ wasm_stringview_iter_next(WASMStringviewIterObjectRef stringview_iter_obj)
 {
     uint32 cur_pos, string_bytes_length, target_bytes_count, code_point;
     uint8 *string_bytes;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 
-    string_obj = stringview_iter_obj->pointer;
+    string_obj = stringview_iter_obj->str_obj;
     cur_pos = stringview_iter_obj->pos;
 
     string_bytes = string_obj->string_bytes;
@@ -548,9 +548,9 @@ wasm_stringview_iter_advance(WASMStringviewIterObjectRef stringview_iter_obj,
     uint32 cur_pos, string_bytes_length, advance_count = 0, target_bytes_count,
                                          advance_pos;
     uint8 *string_bytes;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 
-    string_obj = stringview_iter_obj->pointer;
+    string_obj = stringview_iter_obj->str_obj;
     cur_pos = stringview_iter_obj->pos;
 
     string_bytes = string_obj->string_bytes;
@@ -579,9 +579,9 @@ wasm_stringview_iter_rewind(WASMStringviewIterObjectRef stringview_iter_obj,
     uint32 cur_pos, string_bytes_length, rewind_count = 0, target_bytes_count,
                                          rewind_pos;
     uint8 *string_bytes;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 
-    string_obj = stringview_iter_obj->pointer;
+    string_obj = stringview_iter_obj->str_obj;
     cur_pos = stringview_iter_obj->pos;
 
     string_bytes = string_obj->string_bytes;
@@ -611,10 +611,10 @@ wasm_stringview_iter_slice(WASMExecEnv *exec_env,
     uint32 start_pos, end_pos, string_bytes_length,
         advance_count = 0, target_bytes_count, advance_pos;
     uint8 *string_bytes;
-    WASMString *string_obj, *new_string_obj;
+    WASMStringWTF8 *string_obj, *new_string_obj;
     WASMStringrefObjectRef stringref_obj;
 
-    string_obj = stringview_iter_obj->pointer;
+    string_obj = stringview_iter_obj->str_obj;
     start_pos = stringview_iter_obj->pos;
     end_pos = stringview_iter_obj->pos;
 

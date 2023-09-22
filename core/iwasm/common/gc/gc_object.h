@@ -105,23 +105,23 @@ typedef struct WASMFuncObject {
 /* Representation of WASM stringref objects */
 typedef struct WASMStringrefObject {
     WASMObjectHeader header;
-    void *pointer;
+    const void *str_obj;
 } WASMStringrefObject, *WASMStringrefObjectRef;
 
 typedef struct WASMStringviewWTF8Object {
     WASMObjectHeader header;
-    void *pointer;
+    const void *str_obj;
 } WASMStringviewWTF8Object, *WASMStringviewWTF8ObjectRef;
 
 typedef struct WASMStringviewWTF16Object {
     WASMObjectHeader header;
-    void *pointer;
+    const void *str_obj;
 } WASMStringviewWTF16Object, *WASMStringviewWTF16ObjectRef;
 
 typedef struct WASMStringviewIterObject {
     WASMObjectHeader header;
-    void *pointer;
-    uint32 pos;
+    const void *str_obj;
+    int32 pos;
 } WASMStringviewIterObject, *WASMStringviewIterObjectRef;
 
 struct WASMExecEnv;
@@ -235,22 +235,29 @@ WASMAnyrefObjectRef
 wasm_anyref_obj_new(struct WASMExecEnv *exec_env, const void *host_obj);
 
 WASMStringrefObjectRef
-wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
+wasm_stringref_obj_new(struct WASMExecEnv *exec_env, const void *str_obj);
 
 WASMStringviewWTF8ObjectRef
-wasm_stringview_wtf8_obj_new(struct WASMExecEnv *exec_env, const void *pointer);
+wasm_stringview_wtf8_obj_new(struct WASMExecEnv *exec_env, const void *str_obj);
 
 WASMStringviewWTF16ObjectRef
 wasm_stringview_wtf16_obj_new(struct WASMExecEnv *exec_env,
-                              const void *pointer);
+                              const void *str_obj);
 
 WASMStringviewIterObjectRef
-wasm_stringview_iter_obj_new(struct WASMExecEnv *exec_env, const void *pointer,
+wasm_stringview_iter_obj_new(struct WASMExecEnv *exec_env, const void *str_obj,
                              int32 pos);
 
 uint32
 wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
                              uint32 pos, uint32 bytes);
+
+uint32
+wasm_stringview_iter_next(WASMStringviewIterObjectRef stringview_iter_obj);
+
+uint32
+wasm_stringview_iter_advance(WASMStringviewIterObjectRef stringview_iter_obj,
+                             uint32 code_points_count);
 uint32
 wasm_stringview_iter_rewind(WASMStringviewIterObjectRef stringview_iter_obj,
                             uint32 code_points_count);

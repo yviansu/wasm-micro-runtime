@@ -3875,10 +3875,12 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
     uint8 *string_bytes;
     uint64 total_size;
     WASMStringref *stringref;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 
     read_leb_uint32(p, p_end, deferred_count);
     read_leb_uint32(p, p_end, immediate_count);
+
+    bh_assert(deferred_count == 0);
 
     if (immediate_count > 0) {
         total_size = sizeof(WASMStringref) * (uint64)immediate_count;
@@ -3892,7 +3894,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
             read_leb_uint32(p, p_end, string_length);
 
             if (!(stringref->string_obj = loader_malloc(
-                      sizeof(WASMString), error_buf, error_buf_size))) {
+                      sizeof(WASMStringWTF8), error_buf, error_buf_size))) {
                 return false;
             }
             string_obj = stringref->string_obj;

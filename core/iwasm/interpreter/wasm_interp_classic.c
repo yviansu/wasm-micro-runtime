@@ -14,11 +14,7 @@
 #include "../common/gc/gc_object.h"
 #include "mem_alloc.h"
 #if WASM_ENABLE_STRINGREF != 0
-#if WAMR_STRINGREF_IMPL_SOURCE == 0
-#include "../common/gc/string_object.h"
-#elif WAMR_STRINGREF_IMPL_SOURCE == 1
-/* TODO: include other file */
-#endif
+#include "string_object.h"
 #endif
 #endif
 #if WASM_ENABLE_SHARED_MEMORY != 0
@@ -1395,7 +1391,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 #if WASM_ENABLE_STRINGREF != 0
     WASMStringrefObjectRef stringref_obj;
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
     WASMStringviewIterObjectRef stringview_iter_obj;
 #endif
 #endif
@@ -2682,11 +2678,22 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
-                        uint32 mem_idx, addr, bytes_length, target_bytes_length;
+                        uint32 mem_idx, addr, bytes_length;
+                        int32 target_bytes_length;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
                         encoding_flag flag = WTF8;
                         uint8 *target_bytes;
+
+                        if (opcode == WASM_OP_STRING_NEW_UTF8) {
+                            flag = UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_NEW_LOSSY_UTF8) {
+                            flag = LOSSY_UTF8;
+                        }
+                        else if (opcode == WASM_OP_STRING_NEW_WTF8) {
+                            flag = WTF8;
+                        }
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         bytes_length = POP_I32();
@@ -2694,43 +2701,15 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         memory_inst = module->memories[mem_idx];
                         str_addr = memory_inst->memory_data + addr;
-
-                        if (opcode == WASM_OP_STRING_NEW_UTF8) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_NEW_WTF8) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_NEW_LOSSY_UTF8) {
-                            flag = LOSSY_UTF8;
-                        }
-
-                        if (bytes_length > 0) {
-                            target_bytes = wasm_runtime_malloc(
-                                sizeof(uint8) * bytes_length * 4);
-                        }
-
-                        target_bytes_length =
-                            decode_wtf8(str_addr, bytes_length, NULL, NULL,
-                                        target_bytes, flag);
-
+                        target_bytes = encode_bytes_with_flag(
+                            str_addr, bytes_length, &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
-                            if (target_bytes) {
-                                wasm_runtime_free(target_bytes);
-                            }
                             wasm_set_exception(module,
                                                "isolated surrogate is seen");
                             goto got_exception;
                         }
-
-                        string_obj = wasm_string_obj_new(
-                            target_bytes, target_bytes_length, false);
-                        stringref_obj =
-                            wasm_stringref_obj_new(exec_env, string_obj);
-
-                        if (target_bytes) {
-                            wasm_runtime_free(target_bytes);
-                        }
+                        stringref_obj = wasm_stringref_obj_new_with_embedder(
+                            exec_env, target_bytes, target_bytes_length);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2753,10 +2732,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_MEASURE_UTF8:
                     case WASM_OP_STRING_MEASURE_WTF8:
                     {
-                        uint32 target_bytes_length;
+                        int32 string_bytes_length, target_bytes_length;
+                        uint8 *string_bytes;
                         encoding_flag flag = WTF8;
-
-                        stringref_obj = POP_REF();
 
                         if (opcode == WASM_OP_STRING_MEASURE_UTF8) {
                             flag = UTF8;
@@ -2765,10 +2743,15 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = LOSSY_UTF8;
                         }
 
-                        string_obj = stringref_obj->pointer;
-                        target_bytes_length = decode_wtf8(
-                            string_obj->string_bytes, string_obj->length, NULL,
-                            NULL, NULL, flag);
+                        stringref_obj = POP_REF();
+
+                        string_bytes = wasm_get_stringref_bytes(stringref_obj);
+                        string_bytes_length =
+                            wasm_get_stringref_length(stringref_obj);
+
+                        target_bytes_length =
+                            calculate_encoded_length_with_flag(
+                                string_bytes, string_bytes_length, flag);
 
                         PUSH_I32(target_bytes_length);
                         HANDLE_OP_END();
@@ -2777,19 +2760,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF8:
                     {
-                        uint32 mem_idx, addr, string_bytes_length, i,
-                            target_bytes_length;
+                        uint32 mem_idx, addr;
+                        int32 string_bytes_length, target_bytes_length;
                         uint8 *string_bytes, *target_bytes;
                         WASMMemoryInstance *memory_inst;
                         void *str_addr;
                         encoding_flag flag = WTF8;
-
-                        read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
-                        addr = POP_I32();
-                        stringref_obj = POP_REF();
-
-                        memory_inst = module->memories[mem_idx];
-                        str_addr = memory_inst->memory_data + addr;
 
                         if (opcode == WASM_OP_STRING_ENCODE_UTF8) {
                             flag = UTF8;
@@ -2801,23 +2777,28 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = WTF8;
                         }
 
-                        string_obj = stringref_obj->pointer;
-                        string_bytes = string_obj->string_bytes;
-                        string_bytes_length = string_obj->length;
+                        read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
+                        addr = POP_I32();
+                        stringref_obj = POP_REF();
 
-                        if (string_bytes_length > 0) {
-                            target_bytes = wasm_runtime_malloc(
-                                sizeof(uint8) * string_bytes_length);
-                            target_bytes_length =
-                                decode_wtf8(string_bytes, string_bytes_length,
-                                            NULL, NULL, target_bytes, flag);
-                            if (target_bytes_length == -1) {
-                                wasm_set_exception(
-                                    module, "isolated surrogate is seen");
-                                goto got_exception;
-                            }
-                            bh_memcpy_s(str_addr, target_bytes_length,
-                                        target_bytes, target_bytes_length);
+                        memory_inst = module->memories[mem_idx];
+                        str_addr = memory_inst->memory_data + addr;
+
+                        string_bytes = wasm_get_stringref_bytes(stringref_obj);
+                        string_bytes_length =
+                            wasm_get_stringref_length(stringref_obj);
+
+                        target_bytes = encode_bytes_with_flag(
+                            string_bytes, string_bytes_length,
+                            &target_bytes_length, flag);
+                        if (target_bytes_length == -1) {
+                            wasm_set_exception(module,
+                                               "isolated surrogate is seen");
+                            goto got_exception;
+                        }
+                        bh_memcpy_s(str_addr, target_bytes_length, target_bytes,
+                                    target_bytes_length);
+                        if (target_bytes) {
                             wasm_runtime_free(target_bytes);
                         }
 
@@ -2827,418 +2808,384 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_CONCAT:
                     {
                         WASMStringrefObjectRef stringref_obj1, stringref_obj2;
-                        uint32 string_bytes_length1, string_bytes_length2,
-                            code_points_length1 = 0, code_points_length2 = 0,
-                            code_points_total_length, target_bytes_length = 0;
+                        int32 string_bytes_length1, string_bytes_length2,
+                            code_points_length1, code_points_length2,
+                            code_points_total_length, target_bytes_length;
                         uint8 *string_bytes1, *string_bytes2,
                             *target_bytes = NULL;
                         uint32 *code_points1, *code_points2, *code_points_total;
                         encoding_flag flag = WTF8;
-                        WASMString *target_string_obj;
+                        WASMStringWTF8 *target_string_obj;
 
                         stringref_obj2 = POP_REF();
                         stringref_obj1 = POP_REF();
 
-                        string_bytes1 = ((WASMString *)stringref_obj1->pointer)
-                                            ->string_bytes;
-                        string_bytes2 = ((WASMString *)stringref_obj2->pointer)
-                                            ->string_bytes;
+                        string_bytes1 =
+                            wasm_get_stringref_bytes(stringref_obj1);
                         string_bytes_length1 =
-                            ((WASMString *)stringref_obj1->pointer)->length;
+                            wasm_get_stringref_length(stringref_obj1);
+                        string_bytes2 =
+                            wasm_get_stringref_bytes(stringref_obj2);
                         string_bytes_length2 =
-                            ((WASMString *)stringref_obj2->pointer)->length;
+                            wasm_get_stringref_length(stringref_obj2);
 
-                        if (string_bytes_length1 > 0) {
-                            code_points1 = wasm_runtime_malloc(
-                                sizeof(uint32) * string_bytes_length1);
-                            decode_wtf8(string_bytes1, string_bytes_length1,
-                                        code_points1, &code_points_length1,
-                                        NULL, flag);
-                        }
-                        if (string_bytes_length2 > 0) {
-                            code_points2 = wasm_runtime_malloc(
-                                sizeof(uint32) * string_bytes_length2);
-                            decode_wtf8(string_bytes2, string_bytes_length2,
-                                        code_points2, &code_points_length2,
-                                        NULL, flag);
-                        }
-
-                        code_points_total_length =
-                            code_points_length1 + code_points_length2;
-                        if (code_points_total_length > 0) {
-                            code_points_total = wasm_runtime_malloc(
-                                sizeof(uint32) * code_points_total_length);
-                            bh_memcpy_s(code_points_total,
-                                        sizeof(uint32) * code_points_length1,
-                                        code_points1,
-                                        sizeof(uint32) * code_points_length1);
-                            bh_memcpy_s(code_points_total + code_points_length1,
-                                        sizeof(uint32) * code_points_length2,
-                                        code_points2,
-                                        sizeof(uint32) * code_points_length2);
-
-                            target_bytes = wasm_runtime_malloc(
-                                sizeof(uint8) * code_points_total_length * 4);
-                            target_bytes_length = encode_wtf8(
-                                code_points_total, code_points_total_length,
-                                target_bytes);
-                        }
-
-                        target_string_obj = wasm_string_obj_new(
-                            target_bytes, target_bytes_length, false);
-                        stringref_obj =
-                            wasm_stringref_obj_new(exec_env, target_string_obj);
-
-                        if (code_points1) {
-                            wasm_runtime_free(code_points1);
-                        }
-                        if (code_points2) {
-                            wasm_runtime_free(code_points2);
-                        }
-                        if (code_points_total) {
-                            wasm_runtime_free(code_points_total);
-                        }
-                        if (target_bytes) {
-                            wasm_runtime_free(target_bytes);
-                        }
+                        target_bytes = concat_bytes(
+                            string_bytes1, string_bytes_length1, string_bytes2,
+                            string_bytes_length2, &target_bytes_length, flag);
+                        stringref_obj = wasm_stringref_obj_new_with_embedder(
+                            exec_env, target_bytes, target_bytes_length);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
-                    case WASM_OP_STRING_EQ:
-                    {
-                        WASMStringrefObjectRef stringref_obj1, stringref_obj2;
-                        uint32 is_eq;
+                    // case WASM_OP_STRING_EQ:
+                    // {
+                    //     WASMStringrefObjectRef stringref_obj1,
+                    //     stringref_obj2; uint32 is_eq;
 
-                        stringref_obj2 = POP_REF();
-                        stringref_obj1 = POP_REF();
+                    //     stringref_obj2 = POP_REF();
+                    //     stringref_obj1 = POP_REF();
 
-                        is_eq = wasm_string_eq(stringref_obj1->pointer,
-                                               stringref_obj2->pointer);
+                    //     is_eq = wasm_string_eq(stringref_obj1->str_obj,
+                    //                            stringref_obj2->str_obj);
 
-                        PUSH_I32(is_eq);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRING_IS_USV_SEQUENCE:
-                    {
-                        uint32 target_bytes_length, is_usv_sequence,
-                            string_bytes_length;
-                        uint8 *string_bytes;
+                    //     PUSH_I32(is_eq);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRING_IS_USV_SEQUENCE:
+                    // {
+                    //     uint32 target_bytes_length, is_usv_sequence,
+                    //         string_bytes_length;
+                    //     uint8 *string_bytes;
 
-                        stringref_obj = POP_REF();
+                    //     stringref_obj = POP_REF();
 
-                        string_obj = stringref_obj->pointer;
-                        string_bytes = string_obj->string_bytes;
-                        string_bytes_length = string_obj->length;
+                    //     string_obj = stringref_obj->str_obj;
+                    //     string_bytes = string_obj->string_bytes;
+                    //     string_bytes_length = string_obj->length;
 
-                        target_bytes_length =
-                            decode_wtf8(string_bytes, string_bytes_length, NULL,
-                                        NULL, NULL, UTF8);
-                        if (target_bytes_length == -1) {
-                            is_usv_sequence = 0;
-                        }
-                        else {
-                            is_usv_sequence = 1;
-                        }
+                    //     target_bytes_length =
+                    //         decode_wtf8(string_bytes, string_bytes_length,
+                    //         NULL,
+                    //                     NULL, NULL, UTF8);
+                    //     if (target_bytes_length == (uint32)-1) {
+                    //         is_usv_sequence = 0;
+                    //     }
+                    //     else {
+                    //         is_usv_sequence = 1;
+                    //     }
 
-                        PUSH_I32(is_usv_sequence);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRING_AS_WTF8:
-                    {
-                        stringref_obj = POP_REF();
+                    //     PUSH_I32(is_usv_sequence);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRING_AS_WTF8:
+                    // {
+                    //     stringref_obj = POP_REF();
 
-                        stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
-                            exec_env, stringref_obj->pointer);
+                    //     stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
+                    //         exec_env, stringref_obj->str_obj);
 
-                        PUSH_REF(stringview_wtf8_obj);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
-                    {
-                        uint32 pos, bytes, next_pos;
+                    //     PUSH_REF(stringview_wtf8_obj);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                    // {
+                    //     uint32 pos, bytes, next_pos;
 
-                        bytes = POP_I32();
-                        pos = POP_I32();
-                        stringview_wtf8_obj = POP_REF();
+                    //     bytes = POP_I32();
+                    //     pos = POP_I32();
+                    //     stringview_wtf8_obj = POP_REF();
 
-                        next_pos = wasm_stringview_wtf8_advance(
-                            stringview_wtf8_obj, pos, bytes);
+                    //     next_pos = wasm_stringview_wtf8_advance(
+                    //         stringview_wtf8_obj, pos, bytes);
 
-                        PUSH_I32(next_pos);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
-                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
-                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
-                    {
-                        uint32 mem_idx, addr, pos, bytes, start_pos, end_pos,
-                            string_bytes_length, i, target_bytes_length;
-                        uint8 *string_bytes, *target_bytes;
-                        WASMMemoryInstance *memory_inst;
-                        void *str_addr;
-                        encoding_flag flag = WTF8;
+                    //     PUSH_I32(next_pos);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
+                    // case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
+                    // case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
+                    // {
+                    //     uint32 mem_idx, addr, pos, bytes, start_pos, end_pos,
+                    //         string_bytes_length, target_bytes_length;
+                    //     uint8 *string_bytes, *target_bytes;
+                    //     WASMMemoryInstance *memory_inst;
+                    //     void *str_addr;
+                    //     encoding_flag flag = WTF8;
 
-                        read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
-                        bytes = POP_I32();
-                        pos = POP_I32();
-                        addr = POP_I32();
-                        stringview_wtf8_obj = POP_REF();
+                    //     read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
+                    //     bytes = POP_I32();
+                    //     pos = POP_I32();
+                    //     addr = POP_I32();
+                    //     stringview_wtf8_obj = POP_REF();
 
-                        memory_inst = module->memories[mem_idx];
-                        str_addr = memory_inst->memory_data + addr;
+                    //     memory_inst = module->memories[mem_idx];
+                    //     str_addr = memory_inst->memory_data + addr;
 
-                        if (opcode == WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8) {
-                            flag = UTF8;
-                        }
-                        else if (opcode
-                                 == WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8) {
-                            flag = LOSSY_UTF8;
-                        }
-                        else if (opcode
-                                 == WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8) {
-                            flag = WTF8;
-                        }
+                    //     if (opcode == WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8) {
+                    //         flag = UTF8;
+                    //     }
+                    //     else if (opcode
+                    //              ==
+                    //              WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8) {
+                    //         flag = LOSSY_UTF8;
+                    //     }
+                    //     else if (opcode
+                    //              == WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8) {
+                    //         flag = WTF8;
+                    //     }
 
-                        string_obj = stringview_wtf8_obj->pointer;
-                        string_bytes = string_obj->string_bytes;
-                        start_pos = wasm_stringview_wtf8_advance(
-                            stringview_wtf8_obj, pos, 0);
-                        end_pos = wasm_stringview_wtf8_advance(
-                            stringview_wtf8_obj, start_pos, bytes);
-                        string_bytes_length = end_pos - start_pos;
+                    //     string_obj = stringview_wtf8_obj->str_obj;
+                    //     string_bytes = string_obj->string_bytes;
+                    //     start_pos = wasm_stringview_wtf8_advance(
+                    //         stringview_wtf8_obj, pos, 0);
+                    //     end_pos = wasm_stringview_wtf8_advance(
+                    //         stringview_wtf8_obj, start_pos, bytes);
+                    //     string_bytes_length = end_pos - start_pos;
 
-                        if (string_bytes_length > 0) {
-                            target_bytes = wasm_runtime_malloc(
-                                sizeof(uint8) * string_bytes_length);
-                            target_bytes_length = decode_wtf8(
-                                string_bytes + start_pos, string_bytes_length,
-                                NULL, NULL, target_bytes, flag);
-                            if (target_bytes_length == -1) {
-                                wasm_set_exception(
-                                    module, "isolated surrogate is seen");
-                                goto got_exception;
-                            }
-                            bh_memcpy_s(str_addr, target_bytes_length,
-                                        target_bytes, target_bytes_length);
-                            wasm_runtime_free(target_bytes);
-                        }
+                    //     if (string_bytes_length > 0) {
+                    //         target_bytes = wasm_runtime_malloc(
+                    //             sizeof(uint8) * string_bytes_length);
+                    //         target_bytes_length = decode_wtf8(
+                    //             string_bytes + start_pos,
+                    //             string_bytes_length, NULL, NULL,
+                    //             target_bytes, flag);
+                    //         if (target_bytes_length == (uint32)-1) {
+                    //             wasm_set_exception(
+                    //                 module, "isolated surrogate is seen");
+                    //             goto got_exception;
+                    //         }
+                    //         bh_memcpy_s(str_addr, target_bytes_length,
+                    //                     target_bytes, target_bytes_length);
+                    //         wasm_runtime_free(target_bytes);
+                    //     }
 
-                        PUSH_I32(end_pos);
-                        PUSH_I32(target_bytes_length);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_WTF8_SLICE:
-                    {
-                        uint32 start, end, start_pos, end_pos;
-                        WASMString *new_string_obj;
-                        uint8 *string_bytes;
+                    //     PUSH_I32(end_pos);
+                    //     PUSH_I32(target_bytes_length);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_WTF8_SLICE:
+                    // {
+                    //     uint32 start, end, start_pos, end_pos;
+                    //     WASMStringWTF8 *new_string_obj;
+                    //     uint8 *string_bytes;
 
-                        end = POP_I32();
-                        start = POP_I32();
-                        stringview_wtf8_obj = POP_REF();
+                    //     end = POP_I32();
+                    //     start = POP_I32();
+                    //     stringview_wtf8_obj = POP_REF();
 
-                        start_pos = wasm_stringview_wtf8_advance(
-                            stringview_wtf8_obj, start, 0);
-                        end_pos = wasm_stringview_wtf8_advance(
-                            stringview_wtf8_obj, end, 0);
-                        string_obj = stringview_wtf8_obj->pointer;
-                        string_bytes = string_obj->string_bytes;
+                    //     start_pos = wasm_stringview_wtf8_advance(
+                    //         stringview_wtf8_obj, start, 0);
+                    //     end_pos = wasm_stringview_wtf8_advance(
+                    //         stringview_wtf8_obj, end, 0);
+                    //     string_obj = stringview_wtf8_obj->str_obj;
+                    //     string_bytes = string_obj->string_bytes;
 
-                        wasm_string_obj_new_by_pos(
-                            &new_string_obj, string_bytes, start_pos, end_pos);
-                        stringref_obj =
-                            wasm_stringref_obj_new(exec_env, new_string_obj);
+                    //     wasm_string_obj_new_by_pos(
+                    //         &new_string_obj, string_bytes, start_pos,
+                    //         end_pos);
+                    //     stringref_obj =
+                    //         wasm_stringref_obj_new(exec_env, new_string_obj);
 
-                        PUSH_REF(stringref_obj);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRING_AS_ITER:
-                    {
-                        stringref_obj = POP_REF();
+                    //     PUSH_REF(stringref_obj);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRING_AS_ITER:
+                    // {
+                    //     stringref_obj = POP_REF();
 
-                        stringview_iter_obj = wasm_stringview_iter_obj_new(
-                            exec_env, stringref_obj->pointer, 0);
+                    //     stringview_iter_obj = wasm_stringview_iter_obj_new(
+                    //         exec_env, stringref_obj->str_obj, 0);
 
-                        PUSH_REF(stringview_iter_obj);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_ITER_NEXT:
-                    {
-                        uint32 code_point;
+                    //     PUSH_REF(stringview_iter_obj);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_ITER_NEXT:
+                    // {
+                    //     uint32 code_point;
 
-                        stringview_iter_obj = POP_REF();
+                    //     stringview_iter_obj = POP_REF();
 
-                        code_point =
-                            wasm_stringview_iter_next(stringview_iter_obj);
+                    //     code_point =
+                    //         wasm_stringview_iter_next(stringview_iter_obj);
 
-                        PUSH_I32(code_point);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_ITER_ADVANCE:
-                    case WASM_OP_STRINGVIEW_ITER_REWIND:
-                    {
-                        uint32 code_points_count, code_points_consumed;
+                    //     PUSH_I32(code_point);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_ITER_ADVANCE:
+                    // case WASM_OP_STRINGVIEW_ITER_REWIND:
+                    // {
+                    //     uint32 code_points_count, code_points_consumed;
 
-                        code_points_count = POP_I32();
-                        stringview_iter_obj = POP_REF();
+                    //     code_points_count = POP_I32();
+                    //     stringview_iter_obj = POP_REF();
 
-                        if (opcode == WASM_OP_STRINGVIEW_ITER_ADVANCE) {
-                            code_points_consumed = wasm_stringview_iter_advance(
-                                stringview_iter_obj, code_points_count);
-                        }
-                        else if (opcode == WASM_OP_STRINGVIEW_ITER_REWIND) {
-                            code_points_consumed = wasm_stringview_iter_rewind(
-                                stringview_iter_obj, code_points_count);
-                        }
-                        PUSH_I32(code_points_consumed);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRINGVIEW_ITER_SLICE:
-                    {
-                        uint32 code_points_count;
+                    //     if (opcode == WASM_OP_STRINGVIEW_ITER_ADVANCE) {
+                    //         code_points_consumed =
+                    //         wasm_stringview_iter_advance(
+                    //             stringview_iter_obj, code_points_count);
+                    //     }
+                    //     else if (opcode == WASM_OP_STRINGVIEW_ITER_REWIND) {
+                    //         code_points_consumed =
+                    //         wasm_stringview_iter_rewind(
+                    //             stringview_iter_obj, code_points_count);
+                    //     }
+                    //     PUSH_I32(code_points_consumed);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRINGVIEW_ITER_SLICE:
+                    // {
+                    //     uint32 code_points_count;
 
-                        code_points_count = POP_I32();
-                        stringview_iter_obj = POP_REF();
+                    //     code_points_count = POP_I32();
+                    //     stringview_iter_obj = POP_REF();
 
-                        stringref_obj = wasm_stringview_iter_slice(
-                            exec_env, stringview_iter_obj, code_points_count);
+                    //     stringref_obj = wasm_stringview_iter_slice(
+                    //         exec_env, stringview_iter_obj,
+                    //         code_points_count);
 
-                        PUSH_REF(stringref_obj);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRING_NEW_UTF8_ARRAY:
-                    case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
-                    case WASM_OP_STRING_NEW_WTF8_ARRAY:
-                    {
-                        uint32 start, end, bytes_length, arr_length,
-                            target_bytes_length;
-                        WASMArrayType *array_type;
-                        uint8 *arr_addr, *str_addr, *target_bytes;
-                        encoding_flag flag = WTF8;
+                    //     PUSH_REF(stringref_obj);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    // case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
+                    // case WASM_OP_STRING_NEW_WTF8_ARRAY:
+                    // {
+                    //     uint32 start, end, bytes_length, arr_length,
+                    //         target_bytes_length;
+                    //     WASMArrayType *array_type;
+                    //     uint8 *arr_addr, *str_addr, *target_bytes;
+                    //     encoding_flag flag = WTF8;
 
-                        end = POP_I32();
-                        start = POP_I32();
-                        array_obj = POP_REF();
+                    //     end = POP_I32();
+                    //     start = POP_I32();
+                    //     array_obj = POP_REF();
 
-                        array_type = wasm_obj_get_defined_type(array_obj);
-                        if (array_type->elem_type != PACKED_TYPE_I8) {
-                            wasm_set_exception(
-                                module, "generate stringref from array must "
-                                        "set its elem type to PACKED_TYPE_I8");
-                            goto got_exception;
-                        }
+                    //     array_type = (WASMArrayType
+                    //     *)wasm_obj_get_defined_type(
+                    //         (WASMObjectRef)array_obj);
+                    //     if (array_type->elem_type != PACKED_TYPE_I8) {
+                    //         wasm_set_exception(
+                    //             module, "generate stringref from array must "
+                    //                     "set its elem type to
+                    //                     PACKED_TYPE_I8");
+                    //         goto got_exception;
+                    //     }
 
-                        arr_addr =
-                            (uint8 *)wasm_array_obj_first_elem_addr(array_obj);
-                        str_addr = arr_addr + start;
-                        arr_length = wasm_array_obj_length(array_obj);
+                    //     arr_addr =
+                    //         (uint8
+                    //         *)wasm_array_obj_first_elem_addr(array_obj);
+                    //     str_addr = arr_addr + start;
+                    //     arr_length = wasm_array_obj_length(array_obj);
 
-                        if (end < start || end > arr_length) {
-                            wasm_set_exception(
-                                module,
-                                "end should not less than start, and end "
-                                "should not greater than arr_length");
-                            goto got_exception;
-                        }
-                        bytes_length = end - start;
+                    //     if (end < start || end > arr_length) {
+                    //         wasm_set_exception(
+                    //             module,
+                    //             "end should not less than start, and end "
+                    //             "should not greater than arr_length");
+                    //         goto got_exception;
+                    //     }
+                    //     bytes_length = end - start;
 
-                        if (opcode == WASM_OP_STRING_NEW_UTF8_ARRAY) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_NEW_WTF8_ARRAY) {
-                            flag = UTF8;
-                        }
-                        else if (opcode
-                                 == WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY) {
-                            flag = LOSSY_UTF8;
-                        }
+                    //     if (opcode == WASM_OP_STRING_NEW_UTF8_ARRAY) {
+                    //         flag = UTF8;
+                    //     }
+                    //     else if (opcode == WASM_OP_STRING_NEW_WTF8_ARRAY) {
+                    //         flag = UTF8;
+                    //     }
+                    //     else if (opcode
+                    //              == WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY) {
+                    //         flag = LOSSY_UTF8;
+                    //     }
 
-                        if (bytes_length > 0) {
-                            target_bytes = wasm_runtime_malloc(
-                                sizeof(uint8) * bytes_length * 4);
-                        }
+                    //     if (bytes_length > 0) {
+                    //         target_bytes = wasm_runtime_malloc(
+                    //             sizeof(uint8) * bytes_length * 4);
+                    //     }
 
-                        target_bytes_length =
-                            decode_wtf8(str_addr, bytes_length, NULL, NULL,
-                                        target_bytes, flag);
+                    //     target_bytes_length =
+                    //         decode_wtf8(str_addr, bytes_length, NULL, NULL,
+                    //                     target_bytes, flag);
 
-                        if (target_bytes_length == -1) {
-                            if (target_bytes) {
-                                wasm_runtime_free(target_bytes);
-                            }
-                            wasm_set_exception(module,
-                                               "isolated surrogate is seen");
-                            goto got_exception;
-                        }
+                    //     if (target_bytes_length == -1) {
+                    //         if (target_bytes) {
+                    //             wasm_runtime_free(target_bytes);
+                    //         }
+                    //         wasm_set_exception(module,
+                    //                            "isolated surrogate is seen");
+                    //         goto got_exception;
+                    //     }
 
-                        string_obj = wasm_string_obj_new(
-                            target_bytes, target_bytes_length, false);
-                        stringref_obj =
-                            wasm_stringref_obj_new(exec_env, string_obj);
+                    //     string_obj = wasm_string_obj_new(
+                    //         target_bytes, target_bytes_length, false);
+                    //     stringref_obj =
+                    //         wasm_stringref_obj_new(exec_env, string_obj);
 
-                        if (target_bytes) {
-                            wasm_runtime_free(target_bytes);
-                        }
+                    //     if (target_bytes) {
+                    //         wasm_runtime_free(target_bytes);
+                    //     }
 
-                        PUSH_REF(stringref_obj);
-                        HANDLE_OP_END();
-                    }
-                    case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
-                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
-                    case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
-                    {
-                        uint32 start, bytes_length, arr_length,
-                            target_bytes_length;
-                        WASMArrayType *array_type;
-                        uint8 *arr_addr;
-                        encoding_flag flag = WTF8;
+                    //     PUSH_REF(stringref_obj);
+                    //     HANDLE_OP_END();
+                    // }
+                    // case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    // case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
+                    // case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
+                    // {
+                    //     uint32 start, arr_length, target_bytes_length;
+                    //     WASMArrayType *array_type;
+                    //     uint8 *arr_addr;
+                    //     encoding_flag flag = WTF8;
 
-                        start = POP_I32();
-                        array_obj = POP_REF();
-                        stringref_obj = POP_REF();
+                    //     start = POP_I32();
+                    //     array_obj = POP_REF();
+                    //     stringref_obj = POP_REF();
 
-                        if (opcode == WASM_OP_STRING_ENCODE_UTF8_ARRAY) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_ENCODE_WTF8_ARRAY) {
-                            flag = UTF8;
-                        }
-                        else if (opcode
-                                 == WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY) {
-                            flag = LOSSY_UTF8;
-                        }
+                    //     if (opcode == WASM_OP_STRING_ENCODE_UTF8_ARRAY) {
+                    //         flag = UTF8;
+                    //     }
+                    //     else if (opcode == WASM_OP_STRING_ENCODE_WTF8_ARRAY)
+                    //     {
+                    //         flag = UTF8;
+                    //     }
+                    //     else if (opcode
+                    //              == WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY) {
+                    //         flag = LOSSY_UTF8;
+                    //     }
 
-                        array_type = wasm_obj_get_defined_type(array_obj);
-                        if (array_type->elem_type != PACKED_TYPE_I8) {
-                            wasm_set_exception(
-                                module, "array's type must be PACKED_TYPE_I8");
-                            goto got_exception;
-                        }
+                    //     array_type = wasm_obj_get_defined_type(array_obj);
+                    //     if (array_type->elem_type != PACKED_TYPE_I8) {
+                    //         wasm_set_exception(
+                    //             module, "array's type must be
+                    //             PACKED_TYPE_I8");
+                    //         goto got_exception;
+                    //     }
 
-                        string_obj = stringref_obj->pointer;
-                        target_bytes_length = decode_wtf8(
-                            string_obj->string_bytes + start,
-                            string_obj->length - start, NULL, NULL, NULL, flag);
+                    //     string_obj = stringref_obj->str_obj;
+                    //     target_bytes_length = decode_wtf8(
+                    //         string_obj->string_bytes + start,
+                    //         string_obj->length - start, NULL, NULL, NULL,
+                    //         flag);
 
-                        arr_addr =
-                            (uint8 *)wasm_array_obj_first_elem_addr(array_obj);
-                        arr_length = wasm_array_obj_length(array_obj);
+                    //     arr_addr =
+                    //         (uint8
+                    //         *)wasm_array_obj_first_elem_addr(array_obj);
+                    //     arr_length = wasm_array_obj_length(array_obj);
 
-                        if (target_bytes_length > arr_length) {
-                            wasm_set_exception(module,
-                                               "there is not space for the "
-                                               "code units in the array");
-                            goto got_exception;
-                        }
+                    //     if (target_bytes_length > arr_length) {
+                    //         wasm_set_exception(module,
+                    //                            "there is not space for the "
+                    //                            "code units in the array");
+                    //         goto got_exception;
+                    //     }
 
-                        bh_memcpy_s(arr_addr, target_bytes_length,
-                                    string_obj->string_bytes + start,
-                                    target_bytes_length);
+                    //     bh_memcpy_s(arr_addr, target_bytes_length,
+                    //                 string_obj->string_bytes + start,
+                    //                 target_bytes_length);
 
-                        PUSH_I32(target_bytes_length);
-                        HANDLE_OP_END();
-                    }
+                    //     PUSH_I32(target_bytes_length);
+                    //     HANDLE_OP_END();
+                    // }
 #endif
                     default:
                     {

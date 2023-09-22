@@ -611,14 +611,14 @@ typedef struct BlockAddr {
     uint8 *end_addr;
 } BlockAddr;
 
-typedef struct WASMString {
+typedef struct WASMStringWTF8 {
     uint8 *string_bytes;
-    uint32 length;
+    int32 length;
     bool is_const;
-} WASMString;
+} WASMStringWTF8;
 
 typedef struct WASMStringref {
-    WASMString *string_obj;
+    WASMStringWTF8 *string_obj;
 } WASMStringref;
 
 #if WASM_ENABLE_LIBC_WASI != 0

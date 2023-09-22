@@ -5,18 +5,20 @@
 
 #include "gc_object.h"
 
-WASMString *
-wasm_string_obj_new(uint8 *target_bytes, uint32 length, bool is_const);
+struct WASMExecEnv;
 
-void
-wasm_string_obj_new_by_pos(WASMString **string_obj, uint8 *string_bytes,
-                           uint32 start_pos, uint32 end_pos);
+WASMStringWTF8 *
+wasm_string_obj_new(uint8 *target_bytes, uint32 length);
+
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_embedder(struct WASMExecEnv *exec_env,
+                                     uint8 *target_bytes, uint32 length);
 
 uint32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
 
-void
-wasm_get_stringref_value(WASMStringrefObjectRef stringref_obj, char *value);
+uint8 *
+wasm_get_stringref_bytes(WASMStringrefObjectRef stringref_obj);
 
 uint32
 wasm_string_eq(void *string_obj1, void *string_obj2);

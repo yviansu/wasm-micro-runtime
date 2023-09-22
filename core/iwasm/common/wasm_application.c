@@ -15,6 +15,9 @@
 #endif
 #if WASM_ENABLE_GC != 0
 #include "gc/gc_object.h"
+#if WASM_ENABLE_STRINGREF != 0
+#include "string_object.h"
+#endif
 #endif
 
 static void
@@ -707,8 +710,9 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                         str_len = wasm_get_stringref_length(
                             (WASMStringrefObjectRef)gc_obj);
                         str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
-                        wasm_get_stringref_value((WASMStringrefObjectRef)gc_obj,
-                                                 str);
+                        str = wasm_get_stringref_bytes(
+                            (WASMStringrefObjectRef)gc_obj);
+                        str[str_len] = '\0';
                         os_printf("%s", str);
                     }
                     else if (wasm_obj_is_externref_obj(gc_obj)) {
