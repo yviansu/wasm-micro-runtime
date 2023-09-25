@@ -2877,16 +2877,17 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_I32(is_usv_sequence);
                         HANDLE_OP_END();
                     }
-                    // case WASM_OP_STRING_AS_WTF8:
-                    // {
-                    //     stringref_obj = POP_REF();
+                    case WASM_OP_STRING_AS_WTF8:
+                    {
+                        stringref_obj = POP_REF();
 
-                    //     stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
-                    //         exec_env, stringref_obj->str_obj);
+                        stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
+                            exec_env,
+                            wasm_stringref_obj_get_value(stringref_obj));
 
-                    //     PUSH_REF(stringview_wtf8_obj);
-                    //     HANDLE_OP_END();
-                    // }
+                        PUSH_REF(stringview_wtf8_obj);
+                        HANDLE_OP_END();
+                    }
                     // case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
                     // {
                     //     uint32 pos, bytes, next_pos;

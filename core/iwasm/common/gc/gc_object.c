@@ -679,6 +679,12 @@ wasm_externref_obj_get_value(const WASMExternrefObjectRef externref_obj)
         return externref_obj->internal_obj;
 }
 
+const void *
+wasm_stringref_obj_get_value(WASMStringrefObjectRef stringref_obj)
+{
+    return stringref_obj->str_obj;
+}
+
 WASMI31ObjectRef
 wasm_i31_obj_new(uint32 i31_value)
 {

@@ -53,7 +53,7 @@ int32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 {
     WASMStringWTF8 *string_obj;
-    string_obj = stringref_obj->str_obj;
+    string_obj = (WASMStringWTF8 *)wasm_stringref_obj_get_value(stringref_obj);
     return string_obj->length;
 }
 
@@ -61,7 +61,7 @@ uint8 *
 wasm_get_stringref_bytes(WASMStringrefObjectRef stringref_obj)
 {
     WASMStringWTF8 *string_obj;
-    string_obj = stringref_obj->str_obj;
+    string_obj = (WASMStringWTF8 *)wasm_stringref_obj_get_value(stringref_obj);
     return string_obj->string_bytes;
 }
 

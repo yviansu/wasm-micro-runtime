@@ -282,6 +282,9 @@ wasm_anyref_obj_get_value(const WASMAnyrefObjectRef anyref_obj);
 const void *
 wasm_externref_obj_get_value(const WASMExternrefObjectRef externref_obj);
 
+const void *
+wasm_stringref_obj_get_value(WASMStringrefObjectRef stringref_obj);
+
 WASMI31ObjectRef
 wasm_i31_obj_new(uint32 i31_value);
 
