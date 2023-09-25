@@ -14,11 +14,12 @@ WASMStringrefObjectRef
 wasm_stringref_obj_new_with_embedder(struct WASMExecEnv *exec_env,
                                      uint8 *target_bytes, uint32 length);
 
-uint32
+int32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj);
 
 uint8 *
 wasm_get_stringref_bytes(WASMStringrefObjectRef stringref_obj);
 
-uint32
-wasm_string_eq(void *string_obj1, void *string_obj2);
+int32
+wasm_stringref_eq(WASMStringrefObjectRef stringref_obj1,
+                  WASMStringrefObjectRef stringref_obj2);

@@ -2838,46 +2838,45 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
-                    // case WASM_OP_STRING_EQ:
-                    // {
-                    //     WASMStringrefObjectRef stringref_obj1,
-                    //     stringref_obj2; uint32 is_eq;
+                    case WASM_OP_STRING_EQ:
+                    {
+                        WASMStringrefObjectRef stringref_obj1, stringref_obj2;
+                        int32 is_eq;
 
-                    //     stringref_obj2 = POP_REF();
-                    //     stringref_obj1 = POP_REF();
+                        stringref_obj2 = POP_REF();
+                        stringref_obj1 = POP_REF();
 
-                    //     is_eq = wasm_string_eq(stringref_obj1->str_obj,
-                    //                            stringref_obj2->str_obj);
+                        is_eq =
+                            wasm_stringref_eq(stringref_obj1, stringref_obj2);
 
-                    //     PUSH_I32(is_eq);
-                    //     HANDLE_OP_END();
-                    // }
-                    // case WASM_OP_STRING_IS_USV_SEQUENCE:
-                    // {
-                    //     uint32 target_bytes_length, is_usv_sequence,
-                    //         string_bytes_length;
-                    //     uint8 *string_bytes;
+                        PUSH_I32(is_eq);
+                        HANDLE_OP_END();
+                    }
+                    case WASM_OP_STRING_IS_USV_SEQUENCE:
+                    {
+                        int32 target_bytes_length, is_usv_sequence,
+                            string_bytes_length;
+                        uint8 *string_bytes;
+                        encoding_flag flag = WTF8;
 
-                    //     stringref_obj = POP_REF();
+                        stringref_obj = POP_REF();
 
-                    //     string_obj = stringref_obj->str_obj;
-                    //     string_bytes = string_obj->string_bytes;
-                    //     string_bytes_length = string_obj->length;
+                        string_bytes = wasm_get_stringref_bytes(stringref_obj);
+                        string_bytes_length =
+                            wasm_get_stringref_length(stringref_obj);
+                        target_bytes_length =
+                            calculate_encoded_length_with_flag(
+                                string_bytes, string_bytes_length, flag);
+                        if (target_bytes_length == -1) {
+                            is_usv_sequence = 0;
+                        }
+                        else {
+                            is_usv_sequence = 1;
+                        }
 
-                    //     target_bytes_length =
-                    //         decode_wtf8(string_bytes, string_bytes_length,
-                    //         NULL,
-                    //                     NULL, NULL, UTF8);
-                    //     if (target_bytes_length == (uint32)-1) {
-                    //         is_usv_sequence = 0;
-                    //     }
-                    //     else {
-                    //         is_usv_sequence = 1;
-                    //     }
-
-                    //     PUSH_I32(is_usv_sequence);
-                    //     HANDLE_OP_END();
-                    // }
+                        PUSH_I32(is_usv_sequence);
+                        HANDLE_OP_END();
+                    }
                     // case WASM_OP_STRING_AS_WTF8:
                     // {
                     //     stringref_obj = POP_REF();

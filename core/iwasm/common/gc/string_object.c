@@ -49,7 +49,7 @@ wasm_stringref_obj_new_with_embedder(struct WASMExecEnv *exec_env,
 //     }
 // }
 
-uint32
+int32
 wasm_get_stringref_length(WASMStringrefObjectRef stringref_obj)
 {
     WASMStringWTF8 *string_obj;
@@ -65,11 +65,16 @@ wasm_get_stringref_bytes(WASMStringrefObjectRef stringref_obj)
     return string_obj->string_bytes;
 }
 
-uint32
-wasm_string_eq(void *string_obj1, void *string_obj2)
+int32
+wasm_stringref_eq(WASMStringrefObjectRef stringref_obj1,
+                  WASMStringrefObjectRef stringref_obj2)
 {
-    uint32 string_length1, string_length2, i;
+    WASMStringWTF8 *string_obj1, *string_obj2;
+    int32 string_length1, string_length2, i;
     uint8 *string_bytes1, *string_bytes2;
+
+    string_obj1 = (WASMStringWTF8 *)(stringref_obj1->str_obj);
+    string_obj2 = (WASMStringWTF8 *)(stringref_obj2->str_obj);
 
     if (string_obj1 == string_obj2) {
         return 1;
@@ -79,10 +84,10 @@ wasm_string_eq(void *string_obj1, void *string_obj2)
         return 0;
     }
 
-    string_length1 = ((WASMStringWTF8 *)string_obj1)->length;
-    string_length2 = ((WASMStringWTF8 *)string_obj2)->length;
-    string_bytes1 = ((WASMStringWTF8 *)string_obj1)->string_bytes;
-    string_bytes2 = ((WASMStringWTF8 *)string_obj2)->string_bytes;
+    string_length1 = string_obj1->length;
+    string_length2 = string_obj2->length;
+    string_bytes1 = string_obj1->string_bytes;
+    string_bytes2 = string_obj2->string_bytes;
 
     if (string_length1 != string_length2) {
         return 0;
