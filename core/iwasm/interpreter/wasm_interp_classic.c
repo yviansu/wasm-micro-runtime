@@ -2675,6 +2675,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
 #if WASM_ENABLE_STRINGREF != 0
                     case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_WTF16:
                     case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
@@ -2701,7 +2702,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         memory_inst = module->memories[mem_idx];
                         str_addr = memory_inst->memory_data + addr;
-                        target_bytes = encode_bytes_with_flag(
+                        target_bytes = encode_bytes_with_8bit_flag(
                             str_addr, bytes_length, &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             wasm_set_exception(module,
@@ -2751,7 +2752,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_get_length(stringref_obj);
 
                         target_bytes_length =
-                            calculate_encoded_length_with_flag(
+                            calculate_encoded_length_with_8bit_flag(
                                 string_bytes, string_bytes_length, flag);
 
                         PUSH_I32(target_bytes_length);
@@ -2790,7 +2791,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
 
-                        target_bytes = encode_bytes_with_flag(
+                        target_bytes = encode_bytes_with_8bit_flag(
                             string_bytes, string_bytes_length,
                             &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
@@ -2831,7 +2832,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length2 =
                             wasm_stringref_obj_get_length(stringref_obj2);
 
-                        target_bytes = concat_bytes(
+                        target_bytes = concat_8bit_bytes(
                             string_bytes1, string_bytes_length1, string_bytes2,
                             string_bytes_length2, &target_bytes_length, flag);
                         stringref_obj = wasm_stringref_obj_new_with_embedder(
@@ -2868,7 +2869,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
                         target_bytes_length =
-                            calculate_encoded_length_with_flag(
+                            calculate_encoded_length_with_8bit_flag(
                                 string_bytes, string_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             is_usv_sequence = 0;
@@ -2956,7 +2957,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                                             start_pos, bytes);
                         string_bytes_length = end_pos - start_pos;
 
-                        target_bytes = encode_bytes_with_flag(
+                        target_bytes = encode_bytes_with_8bit_flag(
                             string_bytes + start_pos, string_bytes_length,
                             &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
@@ -3143,7 +3144,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
                         bytes_length = end - start;
 
-                        target_bytes = encode_bytes_with_flag(
+                        target_bytes = encode_bytes_with_8bit_flag(
                             str_addr, bytes_length, &target_bytes_length, flag);
 
                         if (target_bytes_length == -1) {
@@ -3199,7 +3200,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_get_length(stringref_obj);
 
                         target_bytes_length =
-                            calculate_encoded_length_with_flag(
+                            calculate_encoded_length_with_8bit_flag(
                                 string_bytes + start,
                                 string_bytes_length - start, flag);
 

@@ -265,8 +265,8 @@ has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
 }
 
 void
-decode_codepoints(uint32 *code_points, uint32 code_points_length,
-                  uint8 *target_bytes, int32 *target_bytes_length)
+decode_codepoints_to_8bit_bytes(uint32 *code_points, uint32 code_points_length,
+                                uint8 *target_bytes, int32 *target_bytes_length)
 {
     int32 target_bytes_count = 0;
     uint32 i, code_point;
@@ -343,8 +343,8 @@ decode_codepoints(uint32 *code_points, uint32 code_points_length,
 }
 
 uint32
-decode_bytes_to_one_codepoint(uint8 *bytes, uint32 pos, uint32 bytes_length,
-                              uint32 *code_point)
+decode_8bit_bytes_to_one_codepoint(uint8 *bytes, uint32 pos,
+                                   uint32 bytes_length, uint32 *code_point)
 {
     uint8 byte, byte2, byte3, byte4;
     uint32 target_bytes_count = 0;
@@ -387,17 +387,17 @@ decode_bytes_to_one_codepoint(uint8 *bytes, uint32 pos, uint32 bytes_length,
 }
 
 void
-decode_bytes(uint8 *bytes, int32 bytes_length, uint32 *code_points,
-             int32 *code_points_length, uint8 *target_bytes,
-             int32 *target_bytes_length, encoding_flag flag)
+decode_8bit_bytes(uint8 *bytes, int32 bytes_length, uint32 *code_points,
+                  int32 *code_points_length, uint8 *target_bytes,
+                  int32 *target_bytes_length, encoding_flag flag)
 {
     int32 i = 0, j = 0, k = 0;
     int32 total_target_bytes_count = 0, target_bytes_count;
     uint32 code_point;
 
     while (i < bytes_length) {
-        target_bytes_count =
-            decode_bytes_to_one_codepoint(bytes, i, bytes_length, &code_point);
+        target_bytes_count = decode_8bit_bytes_to_one_codepoint(
+            bytes, i, bytes_length, &code_point);
         i += target_bytes_count;
         if (is_isolated_surrogate(code_point)) {
             if (flag == UTF8) {
@@ -456,24 +456,24 @@ decode_bytes(uint8 *bytes, int32 bytes_length, uint32 *code_points,
 }
 
 int32
-calculate_encoded_length_with_codepoints(uint32 *code_points,
-                                         uint32 code_points_length)
+calculate_encoded_8bit_length_by_codepoints(uint32 *code_points,
+                                            uint32 code_points_length)
 {
     int32 target_bytes_length;
 
-    decode_codepoints(code_points, code_points_length, NULL,
-                      &target_bytes_length);
+    decode_codepoints_to_8bit_bytes(code_points, code_points_length, NULL,
+                                    &target_bytes_length);
 
     return target_bytes_length;
 }
 
 uint8 *
-encode_bytes_with_codepoints(uint32 *code_points, uint32 code_points_length,
-                             int32 *target_bytes_length)
+encode_8bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
+                                int32 *target_bytes_length)
 {
     uint8 *target_bytes;
 
-    *target_bytes_length = calculate_encoded_length_with_codepoints(
+    *target_bytes_length = calculate_encoded_8bit_length_by_codepoints(
         code_points, code_points_length);
 
     if (*target_bytes_length > 0) {
@@ -482,7 +482,8 @@ encode_bytes_with_codepoints(uint32 *code_points, uint32 code_points_length,
             return NULL;
         }
         /* get target bytes */
-        decode_codepoints(code_points, code_points_length, target_bytes, NULL);
+        decode_codepoints_to_8bit_bytes(code_points, code_points_length,
+                                        target_bytes, NULL);
     }
     else {
         target_bytes = NULL;
@@ -492,26 +493,26 @@ encode_bytes_with_codepoints(uint32 *code_points, uint32 code_points_length,
 }
 
 int32
-calculate_encoded_length_with_flag(uint8 *bytes, int32 bytes_length,
-                                   encoding_flag flag)
+calculate_encoded_length_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                                        encoding_flag flag)
 {
     int32 target_bytes_length;
 
-    decode_bytes(bytes, bytes_length, NULL, NULL, NULL, &target_bytes_length,
-                 flag);
+    decode_8bit_bytes(bytes, bytes_length, NULL, NULL, NULL,
+                      &target_bytes_length, flag);
 
     return target_bytes_length;
 }
 
 uint8 *
-encode_bytes_with_flag(uint8 *bytes, int32 bytes_length,
-                       int32 *target_bytes_length, encoding_flag flag)
+encode_bytes_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                            int32 *target_bytes_length, encoding_flag flag)
 {
     uint8 *target_bytes;
 
     /* get target bytes length */
     *target_bytes_length =
-        calculate_encoded_length_with_flag(bytes, bytes_length, flag);
+        calculate_encoded_length_with_8bit_flag(bytes, bytes_length, flag);
 
     if (*target_bytes_length > 0) {
         if (!(target_bytes = wasm_runtime_malloc(sizeof(uint8)
@@ -519,7 +520,8 @@ encode_bytes_with_flag(uint8 *bytes, int32 bytes_length,
             return NULL;
         }
         /* get target bytes */
-        decode_bytes(bytes, bytes_length, NULL, NULL, target_bytes, NULL, flag);
+        decode_8bit_bytes(bytes, bytes_length, NULL, NULL, target_bytes, NULL,
+                          flag);
     }
     else {
         target_bytes = NULL;
@@ -529,14 +531,14 @@ encode_bytes_with_flag(uint8 *bytes, int32 bytes_length,
 }
 
 uint32 *
-encode_codepoints_with_flag(uint8 *bytes, int32 bytes_length,
-                            int32 *code_points_length, encoding_flag flag)
+encode_codepoints_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                                 int32 *code_points_length, encoding_flag flag)
 {
     uint32 *code_points;
 
     /* get code points length */
-    decode_bytes(bytes, bytes_length, NULL, code_points_length, NULL, NULL,
-                 flag);
+    decode_8bit_bytes(bytes, bytes_length, NULL, code_points_length, NULL, NULL,
+                      flag);
 
     if (*code_points_length > 0) {
         if (!(code_points = wasm_runtime_malloc(sizeof(uint32)
@@ -544,7 +546,8 @@ encode_codepoints_with_flag(uint8 *bytes, int32 bytes_length,
             return NULL;
         }
         /* get code points */
-        decode_bytes(bytes, bytes_length, code_points, NULL, NULL, NULL, flag);
+        decode_8bit_bytes(bytes, bytes_length, code_points, NULL, NULL, NULL,
+                          flag);
     }
     else {
         code_points = NULL;
@@ -553,17 +556,18 @@ encode_codepoints_with_flag(uint8 *bytes, int32 bytes_length,
 }
 
 uint8 *
-concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
-             int32 bytes_length2, int32 *bytes_length_total, encoding_flag flag)
+concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
+                  int32 bytes_length2, int32 *bytes_length_total,
+                  encoding_flag flag)
 {
     uint32 *code_points1, *code_points2, *code_points_total;
     int32 code_points_length1, code_points_length2, code_points_total_length;
     uint8 *target_bytes;
 
-    code_points1 = encode_codepoints_with_flag(bytes1, bytes_length1,
-                                               &code_points_length1, flag);
-    code_points2 = encode_codepoints_with_flag(bytes2, bytes_length2,
-                                               &code_points_length2, flag);
+    code_points1 = encode_codepoints_with_8bit_flag(bytes1, bytes_length1,
+                                                    &code_points_length1, flag);
+    code_points2 = encode_codepoints_with_8bit_flag(bytes2, bytes_length2,
+                                                    &code_points_length2, flag);
     code_points_total_length = code_points_length1 + code_points_length2;
     if (code_points_total_length > 0) {
         code_points_total =
@@ -574,7 +578,7 @@ concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
                     sizeof(uint32) * code_points_length2, code_points2,
                     sizeof(uint32) * code_points_length2);
     }
-    target_bytes = encode_bytes_with_codepoints(
+    target_bytes = encode_8bit_bytes_by_codepoints(
         code_points_total, code_points_total_length, bytes_length_total);
     if (code_points1) {
         wasm_runtime_free(code_points1);
@@ -619,7 +623,7 @@ wtf8_string_bytes_iter_next(uint8 *string_bytes, int32 string_bytes_length,
         return -1;
     }
 
-    target_bytes_count = decode_bytes_to_one_codepoint(
+    target_bytes_count = decode_8bit_bytes_to_one_codepoint(
         string_bytes, cur_pos, string_bytes_length, code_point);
     cur_pos += target_bytes_count;
 

@@ -74,21 +74,21 @@ typedef enum encoding_flag {
 } encoding_flag;
 
 int32
-calculate_encoded_length_with_flag(uint8 *bytes, int32 bytes_length,
-                                   encoding_flag flag);
+calculate_encoded_length_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                                        encoding_flag flag);
 
 uint8 *
-encode_bytes_with_flag(uint8 *bytes, int32 bytes_length,
-                       int32 *target_bytes_length, encoding_flag flag);
+encode_bytes_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                            int32 *target_bytes_length, encoding_flag flag);
 
 uint32 *
-encode_codepoints_with_flag(uint8 *bytes, int32 bytes_length,
-                            int32 *code_points_length, encoding_flag flag);
+encode_codepoints_with_8bit_flag(uint8 *bytes, int32 bytes_length,
+                                 int32 *code_points_length, encoding_flag flag);
 
 uint8 *
-concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
-             int32 bytes_length2, int32 *bytes_length_total,
-             encoding_flag flag);
+concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
+                  int32 bytes_length2, int32 *bytes_length_total,
+                  encoding_flag flag);
 
 uint32
 wtf8_string_bytes_advance(uint8 *string_bytes, int32 string_bytes_length,
