@@ -587,3 +587,114 @@ concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
     }
     return target_bytes;
 }
+
+uint32
+wtf8_string_bytes_advance(uint8 *string_bytes, int32 string_bytes_length,
+                          uint32 pos, uint32 bytes)
+{
+    uint32 start_pos, next_pos;
+
+    start_pos = align_wtf8_sequential(string_bytes, pos, string_bytes_length);
+    if (bytes == 0) {
+        next_pos = start_pos;
+    }
+    else if (bytes >= string_bytes_length - start_pos) {
+        next_pos = string_bytes_length;
+    }
+    else {
+        next_pos = align_wtf8_reverse(string_bytes, start_pos + bytes,
+                                      string_bytes_length);
+    }
+
+    return next_pos;
+}
+
+int32
+wtf8_string_bytes_iter_next(uint8 *string_bytes, int32 string_bytes_length,
+                            int32 cur_pos, uint32 *code_point)
+{
+    uint32 target_bytes_count;
+
+    if (cur_pos >= string_bytes_length) {
+        return -1;
+    }
+
+    target_bytes_count = decode_bytes_to_one_codepoint(
+        string_bytes, cur_pos, string_bytes_length, code_point);
+    cur_pos += target_bytes_count;
+
+    return cur_pos;
+}
+
+int32
+wtf8_string_bytes_iter_advance(uint8 *string_bytes, int32 string_bytes_length,
+                               int32 cur_pos, uint32 code_points_count,
+                               uint32 *code_points_consumed)
+{
+    uint32 advance_count = 0, target_bytes_count, advance_pos;
+
+    while (advance_count < code_points_count) {
+        if (cur_pos == string_bytes_length) {
+            break;
+        }
+        advance_count++;
+        advance_pos = align_wtf8_sequential(string_bytes, cur_pos + 1,
+                                            string_bytes_length);
+        target_bytes_count = advance_pos - cur_pos;
+        cur_pos += target_bytes_count;
+    }
+
+    if (code_points_consumed) {
+        *code_points_consumed = advance_count;
+    }
+
+    return cur_pos;
+}
+
+int32
+wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
+                              int32 cur_pos, uint32 code_points_count,
+                              uint32 *code_points_consumed)
+{
+    uint32 rewind_count = 0, target_bytes_count, rewind_pos;
+
+    while (rewind_count < code_points_count) {
+        if (cur_pos == 0) {
+            break;
+        }
+        rewind_count++;
+        rewind_pos =
+            align_wtf8_reverse(string_bytes, cur_pos - 1, string_bytes_length);
+        target_bytes_count = cur_pos - rewind_pos;
+        cur_pos -= target_bytes_count;
+    }
+
+    if (code_points_consumed) {
+        *code_points_consumed = rewind_count;
+    }
+
+    return cur_pos;
+}
+
+int32
+wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
+                             int32 cur_pos, uint32 code_points_count)
+{
+    uint32 end_pos, advance_count, target_bytes_count, advance_pos;
+
+    advance_count = 0;
+    end_pos = cur_pos;
+    while (advance_count < code_points_count) {
+        if (end_pos == string_bytes_length) {
+            break;
+        }
+        advance_count++;
+
+        advance_pos = align_wtf8_sequential(string_bytes, end_pos + 1,
+                                            string_bytes_length);
+        target_bytes_count = advance_pos - end_pos;
+        end_pos += target_bytes_count;
+    }
+
+    return end_pos;
+}

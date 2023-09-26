@@ -73,21 +73,6 @@ typedef enum encoding_flag {
     LOSSY_UTF8,
 } encoding_flag;
 
-// uint32
-// align_wtf8_sequential(uint8 *bytes, uint32 pos, uint32 bytes_length);
-
-// uint32
-// align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length);
-
-// uint32
-// encode_wtf8(uint32 *code_points, uint32 code_points_length,
-//             uint8 *target_bytes);
-
-// uint32
-// decode_wtf8(uint8 *bytes, uint32 bytes_length, uint32 *code_points,
-//             uint32 *code_points_length, uint8 *target_bytes,
-//             encoding_flag flag);
-
 int32
 calculate_encoded_length_with_flag(uint8 *bytes, int32 bytes_length,
                                    encoding_flag flag);
@@ -104,6 +89,28 @@ uint8 *
 concat_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
              int32 bytes_length2, int32 *bytes_length_total,
              encoding_flag flag);
+
+uint32
+wtf8_string_bytes_advance(uint8 *string_bytes, int32 string_bytes_length,
+                          uint32 pos, uint32 bytes);
+
+int32
+wtf8_string_bytes_iter_next(uint8 *string_bytes, int32 string_bytes_length,
+                            int32 cur_pos, uint32 *code_point);
+
+int32
+wtf8_string_bytes_iter_advance(uint8 *string_bytes, int32 string_bytes_length,
+                               int32 cur_pos, uint32 code_points_count,
+                               uint32 *code_points_consumed);
+
+int32
+wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
+                              int32 cur_pos, uint32 code_points_count,
+                              uint32 *code_points_consumed);
+
+int32
+wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
+                             int32 cur_pos, uint32 code_points_count);
 
 #ifdef __cplusplus
 }

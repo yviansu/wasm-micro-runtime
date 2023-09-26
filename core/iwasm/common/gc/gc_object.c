@@ -490,156 +490,6 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
     return stringview_iter_obj;
 }
 
-uint32
-wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
-                             uint32 pos, uint32 bytes)
-{
-    uint32 start_pos, next_pos, string_bytes_length;
-    uint8 *string_bytes;
-    WASMStringWTF8 *string_obj;
-
-    string_obj = stringview_wtf8_obj->str_obj;
-    string_bytes = string_obj->string_bytes;
-    string_bytes_length = string_obj->length;
-    start_pos = align_wtf8_sequential(string_bytes, pos, string_bytes_length);
-    if (bytes == 0) {
-        next_pos = start_pos;
-    }
-    else if (bytes >= string_bytes_length - start_pos) {
-        next_pos = string_bytes_length;
-    }
-    else {
-        next_pos = align_wtf8_reverse(string_bytes, start_pos + bytes,
-                                      string_bytes_length);
-    }
-
-    return next_pos;
-}
-
-uint32
-wasm_stringview_iter_next(WASMStringviewIterObjectRef stringview_iter_obj)
-{
-    uint32 cur_pos, string_bytes_length, target_bytes_count, code_point;
-    uint8 *string_bytes;
-    WASMStringWTF8 *string_obj;
-
-    string_obj = stringview_iter_obj->str_obj;
-    cur_pos = stringview_iter_obj->pos;
-
-    string_bytes = string_obj->string_bytes;
-    string_bytes_length = string_obj->length;
-
-    if (cur_pos >= string_bytes_length) {
-        return -1;
-    }
-
-    target_bytes_count = decode_wtf8_one_codepoint(
-        string_bytes, cur_pos, string_bytes_length, &code_point);
-    cur_pos += target_bytes_count;
-    stringview_iter_obj->pos = cur_pos;
-
-    return code_point;
-}
-
-uint32
-wasm_stringview_iter_advance(WASMStringviewIterObjectRef stringview_iter_obj,
-                             uint32 code_points_count)
-{
-    uint32 cur_pos, string_bytes_length, advance_count = 0, target_bytes_count,
-                                         advance_pos;
-    uint8 *string_bytes;
-    WASMStringWTF8 *string_obj;
-
-    string_obj = stringview_iter_obj->str_obj;
-    cur_pos = stringview_iter_obj->pos;
-
-    string_bytes = string_obj->string_bytes;
-    string_bytes_length = string_obj->length;
-
-    while (advance_count < code_points_count) {
-        if (cur_pos == string_bytes_length) {
-            break;
-        }
-        advance_count++;
-        advance_pos = align_wtf8_sequential(string_bytes, cur_pos + 1,
-                                            string_bytes_length);
-        target_bytes_count = advance_pos - cur_pos;
-        cur_pos += target_bytes_count;
-    }
-
-    stringview_iter_obj->pos = cur_pos;
-
-    return advance_count;
-}
-
-uint32
-wasm_stringview_iter_rewind(WASMStringviewIterObjectRef stringview_iter_obj,
-                            uint32 code_points_count)
-{
-    uint32 cur_pos, string_bytes_length, rewind_count = 0, target_bytes_count,
-                                         rewind_pos;
-    uint8 *string_bytes;
-    WASMStringWTF8 *string_obj;
-
-    string_obj = stringview_iter_obj->str_obj;
-    cur_pos = stringview_iter_obj->pos;
-
-    string_bytes = string_obj->string_bytes;
-    string_bytes_length = string_obj->length;
-
-    while (rewind_count < code_points_count) {
-        if (cur_pos == 0) {
-            break;
-        }
-        rewind_count++;
-        rewind_pos =
-            align_wtf8_reverse(string_bytes, cur_pos - 1, string_bytes_length);
-        target_bytes_count = cur_pos - rewind_pos;
-        cur_pos -= target_bytes_count;
-    }
-
-    stringview_iter_obj->pos = cur_pos;
-
-    return rewind_count;
-}
-
-WASMStringrefObjectRef
-wasm_stringview_iter_slice(WASMExecEnv *exec_env,
-                           WASMStringviewIterObjectRef stringview_iter_obj,
-                           uint32 code_points_count)
-{
-    uint32 start_pos, end_pos, string_bytes_length,
-        advance_count = 0, target_bytes_count, advance_pos;
-    uint8 *string_bytes;
-    WASMStringWTF8 *string_obj, *new_string_obj;
-    WASMStringrefObjectRef stringref_obj;
-
-    string_obj = stringview_iter_obj->str_obj;
-    start_pos = stringview_iter_obj->pos;
-    end_pos = stringview_iter_obj->pos;
-
-    string_bytes = string_obj->string_bytes;
-    string_bytes_length = string_obj->length;
-
-    while (advance_count < code_points_count) {
-        if (end_pos == string_bytes_length) {
-            break;
-        }
-        advance_count++;
-
-        advance_pos = align_wtf8_sequential(string_bytes, end_pos + 1,
-                                            string_bytes_length);
-        target_bytes_count = advance_pos - end_pos;
-        end_pos += target_bytes_count;
-    }
-
-    wasm_string_obj_new_by_pos(&new_string_obj, string_bytes, start_pos,
-                               end_pos);
-    stringref_obj = wasm_stringref_obj_new(exec_env, new_string_obj);
-
-    return stringref_obj;
-}
-
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(WASMExternrefObjectRef externref_obj)
 {
@@ -683,6 +533,41 @@ const void *
 wasm_stringref_obj_get_value(WASMStringrefObjectRef stringref_obj)
 {
     return stringref_obj->str_obj;
+}
+
+const void *
+wasm_stringview_wtf8_obj_get_value(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj)
+{
+    return stringview_wtf8_obj->str_obj;
+}
+
+const void *
+wasm_stringview_wtf16_obj_get_value(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj)
+{
+    return stringview_wtf16_obj->str_obj;
+}
+
+const void *
+wasm_stringview_iter_obj_get_value(
+    WASMStringviewIterObjectRef stringview_iter_obj)
+{
+    return stringview_iter_obj->str_obj;
+}
+
+int32
+wasm_stringview_iter_obj_get_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj)
+{
+    return stringview_iter_obj->pos;
+}
+
+void
+wasm_stringview_iter_obj_update_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj, int32 pos)
+{
+    stringview_iter_obj->pos = pos;
 }
 
 WASMI31ObjectRef

@@ -248,25 +248,6 @@ WASMStringviewIterObjectRef
 wasm_stringview_iter_obj_new(struct WASMExecEnv *exec_env, const void *str_obj,
                              int32 pos);
 
-uint32
-wasm_stringview_wtf8_advance(WASMStringviewWTF8ObjectRef stringview_wtf8_obj,
-                             uint32 pos, uint32 bytes);
-
-uint32
-wasm_stringview_iter_next(WASMStringviewIterObjectRef stringview_iter_obj);
-
-uint32
-wasm_stringview_iter_advance(WASMStringviewIterObjectRef stringview_iter_obj,
-                             uint32 code_points_count);
-uint32
-wasm_stringview_iter_rewind(WASMStringviewIterObjectRef stringview_iter_obj,
-                            uint32 code_points_count);
-
-WASMStringrefObjectRef
-wasm_stringview_iter_slice(struct WASMExecEnv *exec_env,
-                           WASMStringviewIterObjectRef stringview_iter_obj,
-                           uint32 code_points_count);
-
 /* Implementation of opcode extern.internalize */
 WASMObjectRef
 wasm_externref_obj_to_internal_obj(const WASMExternrefObjectRef externref_obj);
@@ -284,6 +265,26 @@ wasm_externref_obj_get_value(const WASMExternrefObjectRef externref_obj);
 
 const void *
 wasm_stringref_obj_get_value(WASMStringrefObjectRef stringref_obj);
+
+const void *
+wasm_stringview_wtf8_obj_get_value(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj);
+
+const void *
+wasm_stringview_wtf16_obj_get_value(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj);
+
+const void *
+wasm_stringview_iter_obj_get_value(
+    WASMStringviewIterObjectRef stringview_iter_obj);
+
+int32
+wasm_stringview_iter_obj_get_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj);
+
+void
+wasm_stringview_iter_obj_update_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj, int32 pos);
 
 WASMI31ObjectRef
 wasm_i31_obj_new(uint32 i31_value);
