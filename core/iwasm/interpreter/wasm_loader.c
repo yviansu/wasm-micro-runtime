@@ -12327,6 +12327,42 @@ re_scan:
                         PUSH_REF(REF_TYPE_STRINGREF);
                         break;
                     }
+                    case WASM_OP_STRING_AS_WTF16:
+                    {
+                        POP_STRINGREF();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_LENGTH:
+                    {
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_GET_CODEUNIT:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_ENCODE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_SLICE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
                     case WASM_OP_STRING_AS_ITER:
                     {
                         POP_STRINGREF();
@@ -12355,6 +12391,7 @@ re_scan:
                         break;
                     }
                     case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF16_ARRAY:
                     case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
                     case WASM_OP_STRING_NEW_WTF8_ARRAY:
                     {
@@ -12365,6 +12402,7 @@ re_scan:
                         break;
                     }
                     case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF16_ARRAY:
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
                     case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
                     {

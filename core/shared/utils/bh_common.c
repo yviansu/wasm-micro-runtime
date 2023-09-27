@@ -832,6 +832,19 @@ concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
 }
 
 uint32
+wtf16_pos_treatment(uint32 pos, uint32 code_units_length)
+{
+    uint32 ret_pos;
+
+    ret_pos = pos;
+    if (pos > code_units_length) {
+        ret_pos = code_units_length;
+    }
+
+    return ret_pos;
+}
+
+uint32
 wtf8_string_bytes_advance(uint8 *string_bytes, int32 string_bytes_length,
                           uint32 pos, uint32 bytes)
 {
