@@ -2763,78 +2763,99 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     }
                     case WASM_OP_STRING_MEASURE_UTF8:
                     case WASM_OP_STRING_MEASURE_WTF8:
+                    case WASM_OP_STRING_MEASURE_WTF16:
                     {
                         int32 string_bytes_length, target_bytes_length;
                         uint8 *string_bytes;
                         encoding_flag flag = WTF8;
 
-                        if (opcode == WASM_OP_STRING_MEASURE_UTF8) {
+                        stringref_obj = POP_REF();
+
+                        string_bytes =
+                            wasm_stringref_obj_get_bytes(stringref_obj);
+                        string_bytes_length =
+                            wasm_stringref_obj_get_length(stringref_obj);
+
+                        if (opcode == WASM_OP_STRING_MEASURE_WTF16) {
+                            flag = WTF16;
+                        }
+                        else if (opcode == WASM_OP_STRING_MEASURE_UTF8) {
                             flag = UTF8;
                         }
                         else if (opcode == WASM_OP_STRING_MEASURE_WTF8) {
                             flag = LOSSY_UTF8;
                         }
 
-                        stringref_obj = POP_REF();
-
-                        string_bytes =
-                            wasm_stringref_obj_get_bytes(stringref_obj);
-                        string_bytes_length =
-                            wasm_stringref_obj_get_length(stringref_obj);
-
                         target_bytes_length =
-                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
+                            calculate_encoded_code_units_by_8bit_bytes_with_flag(
                                 string_bytes, string_bytes_length, flag);
 
                         PUSH_I32(target_bytes_length);
                         HANDLE_OP_END();
                     }
                     case WASM_OP_STRING_ENCODE_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF16:
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF8:
                     {
-                        uint32 mem_idx, addr;
+                        uint32 mem_idx, addr, offset = 0;
                         int32 string_bytes_length, target_bytes_length;
                         uint8 *string_bytes, *target_bytes;
+                        uint16 *wtf16_bytes;
                         WASMMemoryInstance *memory_inst;
-                        void *str_addr;
+                        void *maddr;
                         encoding_flag flag = WTF8;
-
-                        if (opcode == WASM_OP_STRING_ENCODE_UTF8) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_ENCODE_LOSSY_UTF8) {
-                            flag = LOSSY_UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_ENCODE_WTF8) {
-                            flag = WTF8;
-                        }
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         addr = POP_I32();
                         stringref_obj = POP_REF();
 
                         memory_inst = module->memories[mem_idx];
-                        str_addr = memory_inst->memory_data + addr;
+                        maddr = memory_inst->memory_data + addr;
 
                         string_bytes =
                             wasm_stringref_obj_get_bytes(stringref_obj);
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
 
-                        target_bytes =
-                            encode_8bit_bytes_by_8bit_bytes_with_flag(
-                                string_bytes, string_bytes_length,
-                                &target_bytes_length, flag);
-                        if (target_bytes_length == -1) {
-                            wasm_set_exception(module,
-                                               "isolated surrogate is seen");
-                            goto got_exception;
+                        if (opcode == WASM_OP_STRING_ENCODE_WTF16) {
+                            flag = WTF16;
+                            wtf16_bytes = (uint16 *)
+                                encode_target_bytes_by_8bit_bytes_with_flag(
+                                    string_bytes, string_bytes_length,
+                                    &target_bytes_length, flag);
+                            for (i = 0; i < target_bytes_length; i++) {
+                                STORE_U16(maddr + (i * 2), wtf16_bytes[i]);
+                            }
+                            if (wtf16_bytes) {
+                                wasm_runtime_free(wtf16_bytes);
+                            }
                         }
-                        bh_memcpy_s(str_addr, target_bytes_length, target_bytes,
-                                    target_bytes_length);
-                        if (target_bytes) {
-                            wasm_runtime_free(target_bytes);
+                        else {
+                            if (opcode == WASM_OP_STRING_ENCODE_UTF8) {
+                                flag = UTF8;
+                            }
+                            else if (opcode
+                                     == WASM_OP_STRING_ENCODE_LOSSY_UTF8) {
+                                flag = LOSSY_UTF8;
+                            }
+                            else if (opcode == WASM_OP_STRING_ENCODE_WTF8) {
+                                flag = WTF8;
+                            }
+                            target_bytes = (uint8 *)
+                                encode_target_bytes_by_8bit_bytes_with_flag(
+                                    string_bytes, string_bytes_length,
+                                    &target_bytes_length, flag);
+                            if (target_bytes_length == -1) {
+                                wasm_set_exception(
+                                    module, "isolated surrogate is seen");
+                                goto got_exception;
+                            }
+                            bh_memcpy_s(maddr, target_bytes_length,
+                                        target_bytes, target_bytes_length);
+                            if (target_bytes) {
+                                wasm_runtime_free(target_bytes);
+                            }
                         }
 
                         PUSH_I32(target_bytes_length);
@@ -2902,7 +2923,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
                         target_bytes_length =
-                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
+                            calculate_encoded_code_units_by_8bit_bytes_with_flag(
                                 string_bytes, string_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             is_usv_sequence = 0;
@@ -3239,7 +3260,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_get_length(stringref_obj);
 
                         target_bytes_length =
-                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
+                            calculate_encoded_code_units_by_8bit_bytes_with_flag(
                                 string_bytes + start,
                                 string_bytes_length - start, flag);
 

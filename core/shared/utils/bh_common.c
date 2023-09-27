@@ -603,7 +603,7 @@ calculate_encoded_16bit_bytes_length_by_codepoints(uint32 *code_points,
     return target_bytes_length;
 }
 
-uint8 *
+uint16 *
 encode_16bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
                                  int32 *target_bytes_length)
 {
@@ -628,8 +628,40 @@ encode_16bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
     return target_bytes;
 }
 
+uint16 *
+encode_16bit_bytes_by_8bit_bytes(uint8 *bytes, int32 bytes_length,
+                                 int32 *target_code_units)
+{
+    uint16 *target_bytes;
+    uint32 *code_points;
+    int32 code_points_length;
+
+    code_points = encode_codepoints_by_8bit_bytes_with_flag(
+        bytes, bytes_length, &code_points_length, WTF8);
+    *target_code_units = calculate_encoded_16bit_bytes_length_by_codepoints(
+        code_points, code_points_length);
+
+    if (*target_code_units > 0) {
+        if (!(target_bytes =
+                  wasm_runtime_malloc(sizeof(uint16) * (*target_code_units)))) {
+            return NULL;
+        }
+        /* get target bytes */
+        decode_codepoints_to_16bit_bytes(code_points, code_points_length,
+                                         target_bytes, NULL);
+    }
+    else {
+        target_bytes = NULL;
+    }
+    if (code_points) {
+        wasm_runtime_free(code_points);
+    }
+
+    return target_bytes;
+}
+
 int32
-calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(uint8 *bytes,
+calculate_encoded_8bit_bytes_length_by_8bit_bytes_with_flag(uint8 *bytes,
                                                             int32 bytes_length,
                                                             encoding_flag flag)
 {
@@ -650,7 +682,7 @@ encode_8bit_bytes_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
 
     /* get target bytes length */
     *target_bytes_length =
-        calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
+        calculate_encoded_8bit_bytes_length_by_8bit_bytes_with_flag(
             bytes, bytes_length, flag);
 
     if (*target_bytes_length > 0) {
@@ -716,6 +748,50 @@ encode_codepoints_by_16bit_bytes(uint16 *bytes, int32 bytes_length,
         code_points = NULL;
     }
     return code_points;
+}
+
+int32
+calculate_encoded_code_units_by_8bit_bytes_with_flag(uint8 *bytes,
+                                                     int32 bytes_length,
+                                                     encoding_flag flag)
+{
+    int32 target_bytes_length, code_points_length;
+    uint32 *code_points;
+
+    if (flag == WTF16) {
+        code_points = encode_codepoints_by_8bit_bytes_with_flag(
+            bytes, bytes_length, &code_points_length, WTF8);
+        target_bytes_length =
+            calculate_encoded_16bit_bytes_length_by_codepoints(
+                code_points, code_points_length);
+        if (code_points) {
+            wasm_runtime_free(code_points);
+        }
+    }
+    else {
+        target_bytes_length =
+            calculate_encoded_8bit_bytes_length_by_8bit_bytes_with_flag(
+                bytes, bytes_length, flag);
+    }
+
+    return target_bytes_length;
+}
+
+void *
+encode_target_bytes_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                            int32 *target_bytes_length,
+                                            encoding_flag flag)
+{
+    void *target_bytes;
+    if (flag == WTF16) {
+        target_bytes = encode_16bit_bytes_by_8bit_bytes(bytes, bytes_length,
+                                                        target_bytes_length);
+    }
+    else {
+        target_bytes = encode_8bit_bytes_by_8bit_bytes_with_flag(
+            bytes, bytes_length, target_bytes_length, flag);
+    }
+    return target_bytes;
 }
 
 uint8 *
