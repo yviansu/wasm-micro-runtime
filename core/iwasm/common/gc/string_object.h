@@ -8,11 +8,18 @@
 struct WASMExecEnv;
 
 WASMStringWTF8 *
-wasm_string_obj_new(uint8 *target_bytes, uint32 length);
+wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length);
+
+WASMStringWTF16 *
+wasm_stringwtf16_obj_new(uint16 *target_bytes, uint32 length);
 
 WASMStringrefObjectRef
-wasm_stringref_obj_new_with_embedder(struct WASMExecEnv *exec_env,
-                                     uint8 *target_bytes, uint32 length);
+wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
+                                          uint8 *target_bytes, uint32 length);
+
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
+                                           uint16 *target_bytes, uint32 length);
 
 int32
 wasm_stringref_obj_get_length(WASMStringrefObjectRef stringref_obj);

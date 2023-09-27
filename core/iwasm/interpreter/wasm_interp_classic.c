@@ -2679,38 +2679,69 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
-                        uint32 mem_idx, addr, bytes_length;
+                        uint32 mem_idx, addr, bytes_length, align,
+                            code_units_length;
                         int32 target_bytes_length;
                         WASMMemoryInstance *memory_inst;
-                        void *str_addr;
+                        void *maddr;
                         encoding_flag flag = WTF8;
                         uint8 *target_bytes;
-
-                        if (opcode == WASM_OP_STRING_NEW_UTF8) {
-                            flag = UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_NEW_LOSSY_UTF8) {
-                            flag = LOSSY_UTF8;
-                        }
-                        else if (opcode == WASM_OP_STRING_NEW_WTF8) {
-                            flag = WTF8;
-                        }
+                        uint16 *wtf16_bytes;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
-                        bytes_length = POP_I32();
+                        if (opcode == WASM_OP_STRING_NEW_WTF16) {
+                            code_units_length = POP_I32();
+                        }
+                        else {
+                            bytes_length = POP_I32();
+                        }
                         addr = POP_I32();
 
                         memory_inst = module->memories[mem_idx];
-                        str_addr = memory_inst->memory_data + addr;
-                        target_bytes = encode_bytes_with_8bit_flag(
-                            str_addr, bytes_length, &target_bytes_length, flag);
-                        if (target_bytes_length == -1) {
-                            wasm_set_exception(module,
-                                               "isolated surrogate is seen");
-                            goto got_exception;
+                        maddr = memory_inst->memory_data + addr;
+
+                        if (opcode == WASM_OP_STRING_NEW_WTF16) {
+                            flag = WTF16;
+                            align = 1;
+                            if (!(wtf16_bytes = wasm_runtime_malloc(
+                                      sizeof(uint16) * code_units_length))) {
+                                wasm_set_exception(
+                                    module,
+                                    "alloc memory for wtf16_bytes failed");
+                                goto got_exception;
+                            }
+                            for (i = 0; i < code_units_length; i++) {
+                                CHECK_ATOMIC_MEMORY_ACCESS();
+                                wtf16_bytes[i] = LOAD_I16(maddr + (i * 2));
+                            }
+                            stringref_obj =
+                                wasm_stringref_obj_new_with_16bit_embedder(
+                                    exec_env, wtf16_bytes, code_units_length);
                         }
-                        stringref_obj = wasm_stringref_obj_new_with_embedder(
-                            exec_env, target_bytes, target_bytes_length);
+                        else {
+                            if (opcode == WASM_OP_STRING_NEW_UTF8) {
+                                flag = UTF8;
+                            }
+                            else if (opcode == WASM_OP_STRING_NEW_LOSSY_UTF8) {
+                                flag = LOSSY_UTF8;
+                            }
+                            else if (opcode == WASM_OP_STRING_NEW_WTF8) {
+                                flag = WTF8;
+                            }
+                            target_bytes =
+                                encode_8bit_bytes_by_8bit_bytes_with_flag(
+                                    maddr, bytes_length, &target_bytes_length,
+                                    flag);
+                            if (target_bytes_length == -1) {
+                                wasm_set_exception(
+                                    module, "isolated surrogate is seen");
+                                goto got_exception;
+                            }
+                            stringref_obj =
+                                wasm_stringref_obj_new_with_8bit_embedder(
+                                    exec_env, target_bytes,
+                                    target_bytes_length);
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2752,7 +2783,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_get_length(stringref_obj);
 
                         target_bytes_length =
-                            calculate_encoded_length_with_8bit_flag(
+                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
                                 string_bytes, string_bytes_length, flag);
 
                         PUSH_I32(target_bytes_length);
@@ -2791,9 +2822,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
 
-                        target_bytes = encode_bytes_with_8bit_flag(
-                            string_bytes, string_bytes_length,
-                            &target_bytes_length, flag);
+                        target_bytes =
+                            encode_8bit_bytes_by_8bit_bytes_with_flag(
+                                string_bytes, string_bytes_length,
+                                &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             wasm_set_exception(module,
                                                "isolated surrogate is seen");
@@ -2835,8 +2867,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         target_bytes = concat_8bit_bytes(
                             string_bytes1, string_bytes_length1, string_bytes2,
                             string_bytes_length2, &target_bytes_length, flag);
-                        stringref_obj = wasm_stringref_obj_new_with_embedder(
-                            exec_env, target_bytes, target_bytes_length);
+                        stringref_obj =
+                            wasm_stringref_obj_new_with_8bit_embedder(
+                                exec_env, target_bytes, target_bytes_length);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2869,7 +2902,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_bytes_length =
                             wasm_stringref_obj_get_length(stringref_obj);
                         target_bytes_length =
-                            calculate_encoded_length_with_8bit_flag(
+                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
                                 string_bytes, string_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             is_usv_sequence = 0;
@@ -2957,9 +2990,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                                             start_pos, bytes);
                         string_bytes_length = end_pos - start_pos;
 
-                        target_bytes = encode_bytes_with_8bit_flag(
-                            string_bytes + start_pos, string_bytes_length,
-                            &target_bytes_length, flag);
+                        target_bytes =
+                            encode_8bit_bytes_by_8bit_bytes_with_flag(
+                                string_bytes + start_pos, string_bytes_length,
+                                &target_bytes_length, flag);
                         if (target_bytes_length == -1) {
                             wasm_set_exception(module,
                                                "isolated surrogate is seen");
@@ -2993,9 +3027,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         end_pos = wtf8_string_bytes_advance(
                             string_bytes, string_bytes_length, end, 0);
 
-                        stringref_obj = wasm_stringref_obj_new_with_embedder(
-                            exec_env, string_bytes + start_pos,
-                            end_pos - start_pos);
+                        stringref_obj =
+                            wasm_stringref_obj_new_with_8bit_embedder(
+                                exec_env, string_bytes + start_pos,
+                                end_pos - start_pos);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3089,9 +3124,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         end_pos = wtf8_string_bytes_iter_slice(
                             string_bytes, string_bytes_length, cur_pos,
                             code_points_count);
-                        stringref_obj = wasm_stringref_obj_new_with_embedder(
-                            exec_env, string_bytes + cur_pos,
-                            end_pos - cur_pos);
+                        stringref_obj =
+                            wasm_stringref_obj_new_with_8bit_embedder(
+                                exec_env, string_bytes + cur_pos,
+                                end_pos - cur_pos);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3144,8 +3180,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
                         bytes_length = end - start;
 
-                        target_bytes = encode_bytes_with_8bit_flag(
-                            str_addr, bytes_length, &target_bytes_length, flag);
+                        target_bytes =
+                            encode_8bit_bytes_by_8bit_bytes_with_flag(
+                                str_addr, bytes_length, &target_bytes_length,
+                                flag);
 
                         if (target_bytes_length == -1) {
                             if (target_bytes) {
@@ -3156,8 +3194,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             goto got_exception;
                         }
 
-                        stringref_obj = wasm_stringref_obj_new_with_embedder(
-                            exec_env, target_bytes, target_bytes_length);
+                        stringref_obj =
+                            wasm_stringref_obj_new_with_8bit_embedder(
+                                exec_env, target_bytes, target_bytes_length);
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3200,7 +3239,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_get_length(stringref_obj);
 
                         target_bytes_length =
-                            calculate_encoded_length_with_8bit_flag(
+                            calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(
                                 string_bytes + start,
                                 string_bytes_length - start, flag);
 
@@ -5646,11 +5685,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         HANDLE_OP_END();
     }
 
-#if WASM_ENABLE_SHARED_MEMORY != 0
     unaligned_atomic:
         wasm_set_exception(module, "unaligned atomic");
         goto got_exception;
-#endif
 
 #if !defined(OS_ENABLE_HW_BOUND_CHECK)              \
     || WASM_CPU_SUPPORTS_UNALIGNED_ADDR_ACCESS == 0 \

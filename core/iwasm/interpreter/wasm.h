@@ -617,6 +617,11 @@ typedef struct WASMStringWTF8 {
     bool is_const;
 } WASMStringWTF8;
 
+typedef struct WASMStringWTF16 {
+    uint16 *string_bytes;
+    int32 length;
+} WASMStringWTF16;
+
 typedef struct WASMStringref {
     WASMStringWTF8 *string_obj;
 } WASMStringref;

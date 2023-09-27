@@ -6,11 +6,14 @@
 #include "string_object.h"
 
 WASMStringWTF8 *
-wasm_string_obj_new(uint8 *target_bytes, uint32 length)
+wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
 {
     WASMStringWTF8 *string_obj;
 
     if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+        return NULL;
+    }
+    if (!target_bytes) {
         return NULL;
     }
 
@@ -21,15 +24,61 @@ wasm_string_obj_new(uint8 *target_bytes, uint32 length)
     return string_obj;
 }
 
+WASMStringWTF16 *
+wasm_stringwtf16_obj_new(uint16 *target_bytes, uint32 length)
+{
+    WASMStringWTF16 *string_obj;
+
+    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF16)))) {
+        return NULL;
+    }
+    if (!target_bytes) {
+        return NULL;
+    }
+
+    string_obj->string_bytes = target_bytes;
+    string_obj->length = length;
+
+    return string_obj;
+}
+
 WASMStringrefObjectRef
-wasm_stringref_obj_new_with_embedder(struct WASMExecEnv *exec_env,
-                                     uint8 *target_bytes, uint32 length)
+wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
+                                          uint8 *target_bytes, uint32 length)
 {
     WASMStringWTF8 *str_obj;
     WASMStringrefObjectRef stringref_obj;
 
-    str_obj = wasm_string_obj_new(target_bytes, length);
+    str_obj = wasm_stringwtf8_obj_new(target_bytes, length);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
+
+    return stringref_obj;
+}
+
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
+                                           uint16 *target_bytes, uint32 length)
+{
+    WASMStringWTF8 *str_obj;
+    WASMStringrefObjectRef stringref_obj;
+    uint8 *string_bytes;
+    uint32 *code_points;
+    int32 code_point_length, target_bytes_length;
+
+    code_points = encode_codepoints_by_16bit_bytes(target_bytes, length,
+                                                   &code_point_length);
+    string_bytes = encode_8bit_bytes_by_codepoints(
+        code_points, code_point_length, &target_bytes_length);
+
+    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length);
+    stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
+
+    if (target_bytes) {
+        wasm_runtime_free(target_bytes);
+    }
+    if (code_points) {
+        wasm_runtime_free(code_points);
+    }
 
     return stringref_obj;
 }

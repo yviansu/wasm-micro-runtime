@@ -74,16 +74,35 @@ typedef enum encoding_flag {
 } encoding_flag;
 
 int32
-calculate_encoded_length_with_8bit_flag(uint8 *bytes, int32 bytes_length,
-                                        encoding_flag flag);
+calculate_encoded_codepoints_length_by_8bit_bytes_with_flag(uint8 *bytes,
+                                                            int32 bytes_length,
+                                                            encoding_flag flag);
 
 uint8 *
-encode_bytes_with_8bit_flag(uint8 *bytes, int32 bytes_length,
-                            int32 *target_bytes_length, encoding_flag flag);
+encode_8bit_bytes_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                          int32 *target_bytes_length,
+                                          encoding_flag flag);
+
+uint8 *
+encode_8bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
+                                int32 *target_bytes_length);
+
+int32
+calculate_encoded_16bit_bytes_length_by_codepoints(uint32 *code_points,
+                                                   uint32 code_points_length);
+
+uint8 *
+encode_16bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
+                                 int32 *target_bytes_length);
 
 uint32 *
-encode_codepoints_with_8bit_flag(uint8 *bytes, int32 bytes_length,
-                                 int32 *code_points_length, encoding_flag flag);
+encode_codepoints_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                          int32 *code_points_length,
+                                          encoding_flag flag);
+
+uint32 *
+encode_codepoints_by_16bit_bytes(uint16 *bytes, int32 bytes_length,
+                                 int32 *code_points_length);
 
 uint8 *
 concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
