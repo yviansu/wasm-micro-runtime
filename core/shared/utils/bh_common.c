@@ -43,7 +43,7 @@ b_memcpy_wa(void *s1, unsigned int s1max, const void *s2, unsigned int n)
         buff = *(p);
         p_byte_read = ((char *)&buff);
 
-        /* read highing word */
+        /* read leading word */
         if ((char *)p <= src) {
             for (ps = src; ps < ((char *)p + 4); ps++) {
                 if (ps >= src + n) {
@@ -53,7 +53,7 @@ b_memcpy_wa(void *s1, unsigned int s1max, const void *s2, unsigned int n)
                 *dest++ = *p_byte_read;
             }
         }
-        /* read lowing word */
+        /* read trailing word */
         else if ((char *)p >= pb - 4) {
             for (ps = (char *)p; ps < src + n; ps++) {
                 *dest++ = *p_byte_read++;

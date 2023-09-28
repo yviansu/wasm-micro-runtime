@@ -2738,6 +2738,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                     target_bytes_length);
                         }
 
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
+
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
                     }
@@ -2752,6 +2758,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             ((wasm_module->stringrefs) + contents)->string_obj;
                         stringref_obj =
                             wasm_stringref_obj_new(exec_env, string_obj);
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2854,6 +2865,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         stringref_obj = wasm_stringref_obj_concat(
                             exec_env, stringref_obj1, stringref_obj2);
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -2891,7 +2907,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         stringview_wtf8_obj =
                             wasm_stringview_wtf8_obj_new_by_stringref(
                                 exec_env, stringref_obj);
-
+                        if (!stringview_wtf8_obj) {
+                            wasm_set_exception(
+                                module, "create stringview_wtf8 object failed");
+                            goto got_exception;
+                        }
                         PUSH_REF(stringview_wtf8_obj);
                         HANDLE_OP_END();
                     }
@@ -3001,6 +3021,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_new_with_8bit_embedder(
                                 exec_env, string_bytes + start_pos,
                                 end_pos - start_pos);
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3012,6 +3037,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         stringview_wtf16_obj =
                             wasm_stringview_wtf16_obj_new_by_stringref(
                                 exec_env, stringref_obj);
+                        if (!stringview_wtf16_obj) {
+                            wasm_set_exception(
+                                module,
+                                "create stringview wtf16 object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringview_wtf16_obj);
                         HANDLE_OP_END();
@@ -3101,6 +3132,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             wasm_stringref_obj_new_with_16bit_embedder(
                                 exec_env, target_code_units + start_pos,
                                 end_pos - start_pos);
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3112,6 +3148,12 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         stringview_iter_obj =
                             wasm_stringview_iter_obj_new_by_stringref(
                                 exec_env, stringref_obj);
+
+                        if (!stringview_iter_obj) {
+                            wasm_set_exception(
+                                module, "create stringview_iter object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringview_iter_obj);
                         HANDLE_OP_END();
@@ -3160,6 +3202,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         stringref_obj = wasm_stringview_iter_obj_slice(
                             exec_env, stringview_iter_obj, code_points_count);
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
+                        }
 
                         PUSH_REF(stringref_obj);
                         HANDLE_OP_END();
@@ -3243,6 +3290,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                 wasm_stringref_obj_new_with_8bit_embedder(
                                     exec_env, target_bytes,
                                     target_bytes_length);
+                        }
+                        if (!stringref_obj) {
+                            wasm_set_exception(
+                                module, "create stringref object failed");
+                            goto got_exception;
                         }
 
                         PUSH_REF(stringref_obj);
@@ -5747,9 +5799,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
         HANDLE_OP_END();
     }
 
+#if WASM_ENABLE_SHARED_MEMORY != 0 || WASM_ENABLE_STRINGREF != 0
     unaligned_atomic:
         wasm_set_exception(module, "unaligned atomic");
         goto got_exception;
+#endif
 
 #if !defined(OS_ENABLE_HW_BOUND_CHECK)              \
     || WASM_CPU_SUPPORTS_UNALIGNED_ADDR_ACCESS == 0 \
