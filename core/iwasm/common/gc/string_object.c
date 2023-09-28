@@ -5,6 +5,64 @@
 
 #include "string_object.h"
 
+void
+wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data)
+{
+    WASMStringWTF8 *string_obj =
+        (WASMStringWTF8 *)wasm_stringref_obj_get_value(stringref_obj);
+    if (string_obj && !(string_obj->is_const)) {
+        if (string_obj->string_bytes) {
+            wasm_runtime_free(string_obj->string_bytes);
+        }
+        wasm_runtime_free(string_obj);
+    }
+}
+
+void
+wasm_stringview_wtf8_obj_finalizer(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj, void *data)
+{
+    WASMStringWTF8 *string_obj =
+        (WASMStringWTF8 *)wasm_stringview_wtf8_obj_get_value(
+            stringview_wtf8_obj);
+    if (string_obj && !(string_obj->is_const)) {
+        if (string_obj->string_bytes) {
+            wasm_runtime_free(string_obj->string_bytes);
+        }
+        wasm_runtime_free(string_obj);
+    }
+}
+
+void
+wasm_stringview_wtf16_obj_finalizer(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj, void *data)
+{
+    WASMStringWTF16 *string_obj =
+        (WASMStringWTF16 *)wasm_stringview_wtf16_obj_get_value(
+            stringview_wtf16_obj);
+    if (string_obj) {
+        if (string_obj->string_bytes) {
+            wasm_runtime_free(string_obj->string_bytes);
+        }
+        wasm_runtime_free(string_obj);
+    }
+}
+
+void
+wasm_stringview_iter_obj_finalizer(
+    WASMStringviewIterObjectRef stringview_iter_obj, void *data)
+{
+    WASMStringWTF8 *string_obj =
+        (WASMStringWTF8 *)wasm_stringview_iter_obj_get_value(
+            stringview_iter_obj);
+    if (string_obj && !(string_obj->is_const)) {
+        if (string_obj->string_bytes) {
+            wasm_runtime_free(string_obj->string_bytes);
+        }
+        wasm_runtime_free(string_obj);
+    }
+}
+
 static WASMStringWTF8 *
 wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
 {

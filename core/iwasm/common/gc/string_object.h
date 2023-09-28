@@ -7,6 +7,21 @@
 
 struct WASMExecEnv;
 
+void
+wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data);
+
+void
+wasm_stringview_wtf8_obj_finalizer(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj, void *data);
+
+void
+wasm_stringview_wtf16_obj_finalizer(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj, void *data);
+
+void
+wasm_stringview_iter_obj_finalizer(
+    WASMStringviewIterObjectRef stringview_iter_obj, void *data);
+
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
                                           uint8 *target_bytes, uint32 length);

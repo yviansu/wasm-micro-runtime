@@ -12,6 +12,9 @@
 #if WASM_ENABLE_AOT != 0
 #include "../aot/aot_runtime.h"
 #endif
+#if WASM_ENABLE_STRINGREF != 0
+#include "string_object.h"
+#endif
 
 WASMRttTypeRef
 wasm_rtt_type_new(WASMType *defined_type, uint32 defined_type_idx,
@@ -425,6 +428,10 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->str_obj = str_obj;
 
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringref_obj,
+        (wasm_obj_finalizer_t)wasm_stringref_obj_finalizer, NULL);
+
     return stringref_obj;
 }
 
@@ -445,6 +452,10 @@ wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     stringview_wtf8_obj->header = (WASMObjectHeader)rtt_type;
     stringview_wtf8_obj->str_obj = str_obj;
 
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf8_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_wtf8_obj_finalizer, NULL);
+
     return stringview_wtf8_obj;
 }
 
@@ -464,6 +475,10 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF16;
     stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
     stringview_wtf16_obj->str_obj = str_obj;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf16_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_wtf16_obj_finalizer, NULL);
 
     return stringview_wtf16_obj;
 }
@@ -486,6 +501,10 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
     stringview_iter_obj->header = (WASMObjectHeader)rtt_type;
     stringview_iter_obj->str_obj = str_obj;
     stringview_iter_obj->pos = pos;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_iter_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_iter_obj_finalizer, NULL);
 
     return stringview_iter_obj;
 }
