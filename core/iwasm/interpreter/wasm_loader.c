@@ -3865,6 +3865,8 @@ fail:
     return false;
 }
 
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
 static bool
 load_stringref_section(const uint8 *buf, const uint8 *buf_end,
                        WASMModule *module, char *error_buf,
@@ -3880,7 +3882,10 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
     read_leb_uint32(p, p_end, deferred_count);
     read_leb_uint32(p, p_end, immediate_count);
 
-    bh_assert(deferred_count == 0);
+    /* proposal set deferred_count for future extension */
+    if (deferred_count != 0) {
+        goto fail;
+    }
 
     if (immediate_count > 0) {
         total_size = sizeof(WASMStringref) * (uint64)immediate_count;
@@ -3926,6 +3931,8 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
 fail:
     return false;
 }
+#endif
+#endif
 
 #if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
 static bool

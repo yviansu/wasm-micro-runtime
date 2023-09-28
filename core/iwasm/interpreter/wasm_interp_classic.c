@@ -2684,7 +2684,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             code_units_length;
                         int32 target_bytes_length;
                         WASMMemoryInstance *memory_inst;
-                        void *maddr;
                         encoding_flag flag = WTF8;
                         uint8 *target_bytes;
                         uint16 *wtf16_bytes;
@@ -2799,12 +2798,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF8:
                     {
-                        uint32 mem_idx, addr, offset = 0;
+                        uint32 mem_idx, addr;
                         int32 string_bytes_length, target_bytes_length;
                         uint8 *string_bytes, *target_bytes;
                         uint16 *wtf16_bytes;
                         WASMMemoryInstance *memory_inst;
-                        void *maddr;
                         encoding_flag flag = WTF8;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
@@ -2825,7 +2823,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                 encode_target_bytes_by_8bit_bytes_with_flag(
                                     string_bytes, string_bytes_length,
                                     &target_bytes_length, flag);
-                            for (i = 0; i < target_bytes_length; i++) {
+                            for (i = 0; i < (uint32)target_bytes_length; i++) {
                                 STORE_U16(maddr + (i * 2), wtf16_bytes[i]);
                             }
                             if (wtf16_bytes) {
@@ -2865,12 +2863,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_CONCAT:
                     {
                         WASMStringrefObjectRef stringref_obj1, stringref_obj2;
-                        int32 string_bytes_length1, string_bytes_length2,
-                            code_points_length1, code_points_length2,
-                            code_points_total_length, target_bytes_length;
+                        int32 string_bytes_length1, string_bytes_length2, target_bytes_length;
                         uint8 *string_bytes1, *string_bytes2,
                             *target_bytes = NULL;
-                        uint32 *code_points1, *code_points2, *code_points_total;
                         encoding_flag flag = WTF8;
 
                         stringref_obj2 = POP_REF();
@@ -3101,8 +3096,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         int32 code_units_length, written_code_units = 0;
                         uint16 *wtf16_bytes;
                         WASMMemoryInstance *memory_inst;
-                        void *maddr;
-                        encoding_flag flag = WTF16;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         len = POP_I32();
@@ -3198,7 +3191,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         uint32 code_points_count, code_points_consumed;
                         uint8 *string_bytes;
-                        int32 string_bytes_length, cur_pos, target_pos;
+                        int32 string_bytes_length, cur_pos, target_pos = 0;
 
                         code_points_count = POP_I32();
                         stringview_iter_obj = POP_REF();
@@ -3373,7 +3366,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             }
                         }
 
-                        array_type = wasm_obj_get_defined_type(array_obj);
+                        array_type = (WASMArrayType *)wasm_obj_get_defined_type((WASMObjectRef)array_obj);
                         if (array_type->elem_type != valid_array_type) {
                             wasm_set_exception(module,
                                                "array's type must be valid");
@@ -3393,7 +3386,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         arr_addr = wasm_array_obj_first_elem_addr(array_obj);
                         arr_length = wasm_array_obj_length(array_obj);
 
-                        if (target_bytes_length > arr_length) {
+                        if (target_bytes_length > (int32)arr_length) {
                             wasm_set_exception(module,
                                                "there is not space for the "
                                                "code units in the array");

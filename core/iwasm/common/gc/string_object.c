@@ -164,7 +164,7 @@ wasm_stringview_wtf16_obj_get_codeunit_at_pos(
         return -1;
     }
     code_units = wasm_stringview_wtf16_obj_get_bytes(stringview_wtf16_obj);
-    target_code_unit = (int16)(code_units + pos);
+    target_code_unit = (int16)*(code_units + pos);
 
     return target_code_unit;
 }

@@ -193,7 +193,7 @@ is_supplementary_code_point(uint32 code_point)
 bool
 is_BMP_code_point(uint32 code_point)
 {
-    return (code_point >= 0x0000 && code_point <= 0xFFFF);
+    return (code_point <= 0xFFFF);
 }
 
 bool
@@ -536,8 +536,7 @@ void
 decode_16bit_bytes(uint16 *bytes, int32 bytes_length, uint32 *code_points,
                    int32 *code_points_length)
 {
-    int32 i = 0, j = 0, k = 0;
-    int32 total_target_bytes_count = 0, target_bytes_count;
+    int32 i = 0, j = 0, target_bytes_count;
     uint32 code_point;
 
     while (i < bytes_length) {
@@ -799,9 +798,9 @@ concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
                   int32 bytes_length2, int32 *bytes_length_total,
                   encoding_flag flag)
 {
-    uint32 *code_points1, *code_points2, *code_points_total;
-    int32 code_points_length1, code_points_length2, code_points_total_length;
-    uint8 *target_bytes;
+    uint32 *code_points1 = NULL, *code_points2 = NULL, *code_points_total = NULL;
+    int32 code_points_length1 = 0, code_points_length2 = 0, code_points_total_length = 0;
+    uint8 *target_bytes = NULL;
 
     code_points1 = encode_codepoints_by_8bit_bytes_with_flag(
         bytes1, bytes_length1, &code_points_length1, flag);
@@ -934,9 +933,9 @@ wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
 
 int32
 wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
-                             int32 cur_pos, uint32 code_points_count)
+                             int32 cur_pos, int32 code_points_count)
 {
-    uint32 end_pos, advance_count, target_bytes_count, advance_pos;
+    int32 end_pos, advance_count, target_bytes_count, advance_pos;
 
     advance_count = 0;
     end_pos = cur_pos;

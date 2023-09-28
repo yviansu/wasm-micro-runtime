@@ -711,7 +711,7 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                             (WASMStringrefObjectRef)gc_obj);
                         str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
                         if (str_len != 0) {
-                            str = wasm_stringref_obj_get_bytes(
+                            str = (char *)wasm_stringref_obj_get_bytes(
                                 (WASMStringrefObjectRef)gc_obj);
                         }
                         str[str_len] = '\0';

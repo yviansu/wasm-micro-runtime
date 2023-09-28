@@ -132,7 +132,7 @@ wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
 
 int32
 wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
-                             int32 cur_pos, uint32 code_points_count);
+                             int32 cur_pos, int32 code_points_count);
 
 #ifdef __cplusplus
 }
