@@ -3893,6 +3893,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
                   loader_malloc(total_size, error_buf, error_buf_size))) {
             goto fail;
         }
+        module->stringref_count = immediate_count;
 
         for (i = 0; i < immediate_count; i++) {
             stringref = (module->stringrefs) + i;
@@ -5618,6 +5619,25 @@ wasm_loader_unload(WASMModule *module)
             node = node_next;
         }
     }
+
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+    if (module->stringrefs) {
+        for (i = 0; i < module->stringref_count; i++) {
+            WASMStringref *stringref = (module->stringrefs) + i;
+            if (stringref) {
+                WASMStringWTF8 *string_obj = stringref->string_obj;
+                if (string_obj) {
+                    wasm_runtime_free(string_obj->string_bytes);
+                }
+                wasm_runtime_free(string_obj);
+            }
+            wasm_runtime_free(stringref);
+        }
+        wasm_runtime_free(module->stringrefs);
+    }
+#endif
+#endif
 
 #if WASM_ENABLE_FAST_INTERP == 0
     if (module->br_table_cache_list) {

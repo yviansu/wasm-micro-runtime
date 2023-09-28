@@ -719,6 +719,11 @@ struct WASMModule {
     /* data count read from datacount section */
     uint32 data_seg_count1;
 #endif
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+    uint32 stringref_count;
+#endif
+#endif
 
     uint32 import_function_count;
     uint32 import_table_count;
@@ -740,7 +745,11 @@ struct WASMModule {
     WASMTableSeg *table_segments;
     WASMDataSeg **data_segments;
     uint32 start_function;
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
     WASMStringref *stringrefs;
+#endif
+#endif
 
     /* total global variable size */
     uint32 global_data_size;
