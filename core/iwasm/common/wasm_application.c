@@ -707,12 +707,12 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                         char *str;
                         uint32 str_len;
 
-                        str_len = wasm_stringref_obj_get_length(
-                            (WASMStringrefObjectRef)gc_obj);
+                        str_len = wasm_stringref_obj_measure(
+                            (WASMStringrefObjectRef)gc_obj, WTF8);
                         str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
                         if (str_len != 0) {
-                            str = (char *)wasm_stringref_obj_get_bytes(
-                                (WASMStringrefObjectRef)gc_obj);
+                            str = (char *)wasm_stringref_obj_encode_with_flag(
+                                (WASMStringrefObjectRef)gc_obj, WTF8);
                         }
                         str[str_len] = '\0';
                         os_printf("%s", str);

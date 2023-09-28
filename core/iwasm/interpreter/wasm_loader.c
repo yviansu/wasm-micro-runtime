@@ -3891,7 +3891,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
         total_size = sizeof(WASMStringref) * (uint64)immediate_count;
         if (!(module->stringrefs =
                   loader_malloc(total_size, error_buf, error_buf_size))) {
-            return false;
+            goto fail;
         }
 
         for (i = 0; i < immediate_count; i++) {
@@ -5167,7 +5167,11 @@ static uint8 section_ids[] = {
     SECTION_TYPE_FUNC,
     SECTION_TYPE_TABLE,
     SECTION_TYPE_MEMORY,
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
     SECTION_TYPE_STRINGREF,
+#endif
+#endif
     SECTION_TYPE_GLOBAL,
     SECTION_TYPE_EXPORT,
     SECTION_TYPE_START,

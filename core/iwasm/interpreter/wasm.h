@@ -146,8 +146,10 @@ typedef void *table_elem_type_t;
 #if WASM_ENABLE_BULK_MEMORY != 0
 #define SECTION_TYPE_DATACOUNT 12
 #endif
+#if WASM_ENABLE_GC != 0
 #if WASM_ENABLE_STRINGREF != 0
 #define SECTION_TYPE_STRINGREF 14
+#endif
 #endif
 
 #define SUB_SECTION_TYPE_MODULE 0

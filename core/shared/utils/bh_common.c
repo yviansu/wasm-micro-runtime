@@ -440,8 +440,8 @@ decode_8bit_bytes(uint8 *bytes, int32 bytes_length, uint32 *code_points,
                   int32 *target_bytes_length, encoding_flag flag)
 {
     int32 i = 0, j = 0, k = 0;
-    int32 total_target_bytes_count = 0, target_bytes_count;
-    uint32 code_point;
+    int32 total_target_bytes_count = 0, target_bytes_count = 0;
+    uint32 code_point = 0;
 
     while (i < bytes_length) {
         target_bytes_count = decode_8bit_bytes_to_one_codepoint(
@@ -536,8 +536,8 @@ void
 decode_16bit_bytes(uint16 *bytes, int32 bytes_length, uint32 *code_points,
                    int32 *code_points_length)
 {
-    int32 i = 0, j = 0, target_bytes_count;
-    uint32 code_point;
+    int32 i = 0, j = 0, target_bytes_count = 0;
+    uint32 code_point = 0;
 
     while (i < bytes_length) {
         target_bytes_count = decode_16bit_bytes_to_one_codepoint(
