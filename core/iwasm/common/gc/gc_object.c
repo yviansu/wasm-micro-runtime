@@ -766,8 +766,10 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
               gc_obj_malloc(heap_handle, sizeof(WASMStringrefObject)))) {
         return NULL;
     }
+    if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+        return NULL;
+    }
 
-    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGREF;
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->str_obj = str_obj;
@@ -790,8 +792,10 @@ wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
               gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF8Object)))) {
         return NULL;
     }
+    if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+        return NULL;
+    }
 
-    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF8;
     stringview_wtf8_obj->header = (WASMObjectHeader)rtt_type;
     stringview_wtf8_obj->str_obj = str_obj;
@@ -814,8 +818,10 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
               gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF16Object)))) {
         return NULL;
     }
+    if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+        return NULL;
+    }
 
-    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF16;
     stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
     stringview_wtf16_obj->str_obj = str_obj;
@@ -839,8 +845,10 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
               heap_handle, sizeof(WASMStringviewIterObjectRef)))) {
         return NULL;
     }
+    if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+        return NULL;
+    }
 
-    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
     rtt_type->type_flag = WASM_TYPE_STRINGVIEWITER;
     stringview_iter_obj->header = (WASMObjectHeader)rtt_type;
     stringview_iter_obj->str_obj = str_obj;

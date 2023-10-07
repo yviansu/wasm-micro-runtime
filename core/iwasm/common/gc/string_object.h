@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#ifndef _STRING_OBJECT_H_
+#define _STRING_OBJECT_H_
+
 #include "gc_object.h"
 
 struct WASMExecEnv;
@@ -114,3 +117,5 @@ wasm_stringview_wtf8_obj_convert_char(
 char *
 wasm_stringview_wtf16_obj_convert_char(
     WASMStringviewWTF16ObjectRef stringview_wtf16_obj);
+
+#endif /* end of _STRING_OBJECT_H_ */
