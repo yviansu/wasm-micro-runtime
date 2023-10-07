@@ -64,7 +64,7 @@ wasm_stringview_iter_obj_finalizer(
 }
 
 static WASMStringWTF8 *
-wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
+wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length, bool is_const)
 {
     WASMStringWTF8 *string_obj;
 
@@ -77,7 +77,7 @@ wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
 
     string_obj->string_bytes = target_bytes;
     string_obj->length = length;
-    string_obj->is_const = false;
+    string_obj->is_const = is_const;
 
     return string_obj;
 }
@@ -162,12 +162,13 @@ wasm_stringview_iter_obj_get_bytes(
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
-                                          uint8 *target_bytes, uint32 length)
+                                          uint8 *target_bytes, uint32 length,
+                                          bool is_const)
 {
     WASMStringWTF8 *str_obj;
     WASMStringrefObjectRef stringref_obj;
 
-    str_obj = wasm_stringwtf8_obj_new(target_bytes, length);
+    str_obj = wasm_stringwtf8_obj_new(target_bytes, length, is_const);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
 
     return stringref_obj;
@@ -188,7 +189,7 @@ wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
     string_bytes = encode_8bit_bytes_by_codepoints(
         code_points, code_point_length, &target_bytes_length);
 
-    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length);
+    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length, false);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
 
     if (code_points) {
@@ -418,7 +419,7 @@ wasm_stringref_obj_concat(struct WASMExecEnv *exec_env,
         concat_8bit_bytes(string_bytes1, string_bytes_length1, string_bytes2,
                           string_bytes_length2, &target_bytes_length, flag);
     stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
-        exec_env, target_bytes, target_bytes_length);
+        exec_env, target_bytes, target_bytes_length, false);
 
     return stringref_obj;
 }
@@ -526,7 +527,7 @@ wasm_stringview_iter_obj_slice(struct WASMExecEnv *exec_env,
     end_pos = wtf8_string_bytes_iter_slice(string_bytes, string_bytes_length,
                                            cur_pos, code_points_count);
     stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
-        exec_env, string_bytes + cur_pos, end_pos - cur_pos);
+        exec_env, string_bytes + cur_pos, end_pos - cur_pos, false);
 
     return stringref_obj;
 }

@@ -24,7 +24,8 @@ wasm_stringview_iter_obj_finalizer(
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
-                                          uint8 *target_bytes, uint32 length);
+                                          uint8 *target_bytes, uint32 length,
+                                          bool is_const);
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,

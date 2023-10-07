@@ -2734,8 +2734,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             }
                             stringref_obj =
                                 wasm_stringref_obj_new_with_8bit_embedder(
-                                    exec_env, target_bytes,
-                                    target_bytes_length);
+                                    exec_env, target_bytes, target_bytes_length,
+                                    false);
                         }
 
                         if (!stringref_obj) {
@@ -2757,7 +2757,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         string_obj =
                             ((wasm_module->stringrefs) + contents)->string_obj;
                         stringref_obj =
-                            wasm_stringref_obj_new(exec_env, string_obj);
+                            wasm_stringref_obj_new_with_8bit_embedder(
+                                exec_env, string_obj->string_bytes,
+                                string_obj->length, string_obj->is_const);
                         if (!stringref_obj) {
                             wasm_set_exception(
                                 module, "create stringref object failed");
@@ -3020,7 +3022,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         stringref_obj =
                             wasm_stringref_obj_new_with_8bit_embedder(
                                 exec_env, string_bytes + start_pos,
-                                end_pos - start_pos);
+                                end_pos - start_pos, false);
                         if (!stringref_obj) {
                             wasm_set_exception(
                                 module, "create stringref object failed");
@@ -3288,8 +3290,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                             stringref_obj =
                                 wasm_stringref_obj_new_with_8bit_embedder(
-                                    exec_env, target_bytes,
-                                    target_bytes_length);
+                                    exec_env, target_bytes, target_bytes_length,
+                                    false);
                         }
                         if (!stringref_obj) {
                             wasm_set_exception(
