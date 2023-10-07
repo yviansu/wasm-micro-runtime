@@ -3310,27 +3310,30 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         uint32 start, arr_length, valid_array_type;
                         int32 target_bytes_length;
                         WASMArrayType *array_type;
-                        void *arr_addr, *target_bytes;
+                        void *target_bytes;
                         encoding_flag flag = WTF8;
+                        WASMValue array_elem = { 0 };
 
                         start = POP_I32();
                         array_obj = POP_REF();
                         stringref_obj = POP_REF();
 
-                        if (opcode == WASM_OP_STRING_NEW_WTF16_ARRAY) {
+                        if (opcode == WASM_OP_STRING_ENCODE_WTF16_ARRAY) {
                             flag = WTF16;
                             valid_array_type = PACKED_TYPE_I16;
                         }
                         else {
                             valid_array_type = PACKED_TYPE_I8;
-                            if (opcode == WASM_OP_STRING_NEW_UTF8_ARRAY) {
+                            if (opcode == WASM_OP_STRING_ENCODE_UTF8_ARRAY) {
                                 flag = UTF8;
                             }
-                            else if (opcode == WASM_OP_STRING_NEW_WTF8_ARRAY) {
+                            else if (opcode
+                                     == WASM_OP_STRING_ENCODE_WTF8_ARRAY) {
                                 flag = WTF8;
                             }
-                            else if (opcode
-                                     == WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY) {
+                            else if (
+                                opcode
+                                == WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY) {
                                 flag = LOSSY_UTF8;
                             }
                         }
@@ -3342,7 +3345,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                                "array's type must be valid");
                             goto got_exception;
                         }
-
                         target_bytes_length =
                             wasm_stringref_obj_measure_from_start(stringref_obj,
                                                                   flag, start);
@@ -3351,7 +3353,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                                "isolated surrogate is seen");
                             goto got_exception;
                         }
-                        arr_addr = wasm_array_obj_first_elem_addr(array_obj);
                         arr_length = wasm_array_obj_length(array_obj);
                         if (target_bytes_length > (int32)arr_length) {
                             wasm_set_exception(module,
@@ -3361,17 +3362,24 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         }
                         target_bytes = wasm_stringref_obj_encode_with_flag(
                             stringref_obj, flag);
+
                         if (flag == WTF16) {
-                            bh_memcpy_s(arr_addr, target_bytes_length,
-                                        (uint16 *)target_bytes + start,
-                                        target_bytes_length);
+                            for (i = 0; i < (uint32)target_bytes_length; i++) {
+                                array_elem.i32 =
+                                    *((uint16 *)target_bytes + start + i);
+                                wasm_array_obj_set_elem(array_obj, i,
+                                                        &array_elem);
+                            }
                         }
                         else {
-
-                            bh_memcpy_s(arr_addr, target_bytes_length,
-                                        (uint8 *)target_bytes + start,
-                                        target_bytes_length);
+                            for (i = 0; i < (uint32)target_bytes_length; i++) {
+                                array_elem.i32 =
+                                    *((uint8 *)target_bytes + start + i);
+                                wasm_array_obj_set_elem(array_obj, i,
+                                                        &array_elem);
+                            }
                         }
+
                         if (target_bytes) {
                             wasm_runtime_free(target_bytes);
                         }
