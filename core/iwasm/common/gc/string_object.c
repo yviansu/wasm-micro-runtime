@@ -191,9 +191,6 @@ wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
     str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
 
-    if (target_bytes) {
-        wasm_runtime_free(target_bytes);
-    }
     if (code_points) {
         wasm_runtime_free(code_points);
     }
@@ -532,4 +529,74 @@ wasm_stringview_iter_obj_slice(struct WASMExecEnv *exec_env,
         exec_env, string_bytes + cur_pos, end_pos - cur_pos);
 
     return stringref_obj;
+}
+
+char *
+wasm_stringref_obj_convert_char(WASMStringrefObjectRef stringref_obj)
+{
+    char *str;
+    int32 str_len, i;
+    uint8 *string_bytes;
+
+    str_len = wasm_stringref_obj_measure(stringref_obj, WTF8);
+    string_bytes =
+        (uint8 *)wasm_stringref_obj_encode_with_flag(stringref_obj, WTF8);
+    str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
+    if (str_len != 0) {
+        for (i = 0; i < str_len; i++) {
+            str[i] = string_bytes[i];
+        }
+    }
+    str[str_len] = '\0';
+
+    return str;
+}
+
+char *
+wasm_stringview_wtf8_obj_convert_char(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj)
+{
+    char *str;
+    int32 str_len, i;
+    uint8 *string_bytes;
+
+    str_len = wasm_stringview_wtf8_obj_get_length(stringview_wtf8_obj);
+    string_bytes = wasm_stringview_wtf8_obj_get_bytes(stringview_wtf8_obj);
+    str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
+    if (str_len != 0) {
+        for (i = 0; i < str_len; i++) {
+            str[i] = string_bytes[i];
+        }
+    }
+    str[str_len] = '\0';
+
+    return str;
+}
+
+char *
+wasm_stringview_wtf16_obj_convert_char(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj)
+{
+    char *str;
+    int32 wtf16_obj_len, code_point_length, str_len, i;
+    uint32 *code_points;
+    uint16 *wtf16_obj_bytes;
+    uint8 *string_bytes;
+
+    wtf16_obj_len = wasm_stringview_wtf16_obj_get_length(stringview_wtf16_obj);
+    wtf16_obj_bytes = wasm_stringview_wtf16_obj_get_bytes(stringview_wtf16_obj);
+    code_points = encode_codepoints_by_16bit_bytes(
+        wtf16_obj_bytes, wtf16_obj_len, &code_point_length);
+    string_bytes = encode_8bit_bytes_by_codepoints(code_points,
+                                                   code_point_length, &str_len);
+
+    str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
+    if (str_len != 0) {
+        for (i = 0; i < str_len; i++) {
+            str[i] = string_bytes[i];
+        }
+    }
+    str[str_len] = '\0';
+
+    return str;
 }

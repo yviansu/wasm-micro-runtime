@@ -102,3 +102,14 @@ WASMStringrefObjectRef
 wasm_stringview_iter_obj_slice(struct WASMExecEnv *exec_env,
                                WASMStringviewIterObjectRef stringview_iter_obj,
                                uint32 code_points_count);
+
+char *
+wasm_stringref_obj_convert_char(WASMStringrefObjectRef stringref_obj);
+
+char *
+wasm_stringview_wtf8_obj_convert_char(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj);
+
+char *
+wasm_stringview_wtf16_obj_convert_char(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj);

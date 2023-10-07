@@ -523,7 +523,7 @@ decode_16bit_bytes_to_one_codepoint(uint16 *bytes, uint32 pos,
         }
     }
     else {
-        if (*code_point) {
+        if (code_point) {
             *code_point = byte;
         }
         target_bytes_count = 1;

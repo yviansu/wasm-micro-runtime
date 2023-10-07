@@ -5634,7 +5634,6 @@ wasm_loader_unload(WASMModule *module)
             }
             wasm_runtime_free(stringref);
         }
-        wasm_runtime_free(module->stringrefs);
     }
 #endif
 #endif
