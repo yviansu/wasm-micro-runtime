@@ -12,6 +12,9 @@
 #if WASM_ENABLE_AOT != 0
 #include "../aot/aot_runtime.h"
 #endif
+#if WASM_ENABLE_STRINGREF != 0
+#include "string_object.h"
+#endif
 
 WASMRttTypeRef
 wasm_rtt_type_new(WASMType *defined_type, uint32 defined_type_idx,
@@ -750,3 +753,186 @@ wasm_obj_unset_gc_finalizer(wasm_exec_env_t exec_env, void *obj)
     void *heap_handle = get_gc_heap_handle(exec_env);
     mem_allocator_unset_gc_finalizer(heap_handle, obj);
 }
+
+#if WASM_ENABLE_STRINGREF != 0
+WASMStringrefObjectRef
+wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringrefObjectRef stringref_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringref_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringrefObject)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGREF;
+    stringref_obj->header = (WASMObjectHeader)rtt_type;
+    stringref_obj->str_obj = str_obj;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringref_obj,
+        (wasm_obj_finalizer_t)wasm_stringref_obj_finalizer, NULL);
+
+    return stringref_obj;
+}
+
+WASMStringviewWTF8ObjectRef
+wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringview_wtf8_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF8Object)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF8;
+    stringview_wtf8_obj->header = (WASMObjectHeader)rtt_type;
+    stringview_wtf8_obj->str_obj = str_obj;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf8_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_wtf8_obj_finalizer, NULL);
+
+    return stringview_wtf8_obj;
+}
+
+WASMStringviewWTF16ObjectRef
+wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringview_wtf16_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringviewWTF16Object)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGVIEWWTF16;
+    stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
+    stringview_wtf16_obj->str_obj = str_obj;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf16_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_wtf16_obj_finalizer, NULL);
+
+    return stringview_wtf16_obj;
+}
+
+WASMStringviewIterObjectRef
+wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
+                             int32 pos)
+{
+    void *heap_handle = get_gc_heap_handle(exec_env);
+    WASMStringviewIterObjectRef stringview_iter_obj;
+    WASMRttTypeRef rtt_type;
+
+    if (!(stringview_iter_obj = gc_obj_malloc(
+              heap_handle, sizeof(WASMStringviewIterObjectRef)))) {
+        return NULL;
+    }
+
+    rtt_type = wasm_runtime_malloc(sizeof(WASMRttType));
+    rtt_type->type_flag = WASM_TYPE_STRINGVIEWITER;
+    stringview_iter_obj->header = (WASMObjectHeader)rtt_type;
+    stringview_iter_obj->str_obj = str_obj;
+    stringview_iter_obj->pos = pos;
+
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_iter_obj,
+        (wasm_obj_finalizer_t)wasm_stringview_iter_obj_finalizer, NULL);
+
+    return stringview_iter_obj;
+}
+
+const void *
+wasm_stringref_obj_get_value(WASMStringrefObjectRef stringref_obj)
+{
+    return stringref_obj->str_obj;
+}
+
+const void *
+wasm_stringview_wtf8_obj_get_value(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj)
+{
+    return stringview_wtf8_obj->str_obj;
+}
+
+const void *
+wasm_stringview_wtf16_obj_get_value(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj)
+{
+    return stringview_wtf16_obj->str_obj;
+}
+
+const void *
+wasm_stringview_iter_obj_get_value(
+    WASMStringviewIterObjectRef stringview_iter_obj)
+{
+    return stringview_iter_obj->str_obj;
+}
+
+int32
+wasm_stringview_iter_obj_get_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj)
+{
+    return stringview_iter_obj->pos;
+}
+
+void
+wasm_stringview_iter_obj_update_pos(
+    WASMStringviewIterObjectRef stringview_iter_obj, int32 pos)
+{
+    stringview_iter_obj->pos = pos;
+}
+
+bool
+wasm_obj_is_stringref_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGREF ? true : false;
+}
+
+bool
+wasm_obj_is_stringview_wtf8_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF8 ? true : false;
+}
+
+bool
+wasm_obj_is_stringview_wtf16_obj(WASMObjectRef obj)
+{
+    WASMRttTypeRef rtt_type;
+
+    bh_assert(obj);
+
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
+        return false;
+
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
+    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF16 ? true : false;
+}
+#endif

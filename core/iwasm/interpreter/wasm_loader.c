@@ -3865,6 +3865,76 @@ fail:
     return false;
 }
 
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+static bool
+load_stringref_section(const uint8 *buf, const uint8 *buf_end,
+                       WASMModule *module, char *error_buf,
+                       uint32 error_buf_size)
+{
+    const uint8 *p = buf, *p_end = buf_end;
+    int32 deferred_count, immediate_count, string_length, i, j;
+    uint8 *string_bytes;
+    uint64 total_size;
+    WASMStringref *stringref;
+    WASMStringWTF8 *string_obj;
+
+    read_leb_uint32(p, p_end, deferred_count);
+    read_leb_uint32(p, p_end, immediate_count);
+
+    /* proposal set deferred_count for future extension */
+    if (deferred_count != 0) {
+        goto fail;
+    }
+
+    if (immediate_count > 0) {
+        total_size = sizeof(WASMStringref) * (uint64)immediate_count;
+        if (!(module->stringrefs =
+                  loader_malloc(total_size, error_buf, error_buf_size))) {
+            goto fail;
+        }
+        module->stringref_count = immediate_count;
+
+        for (i = 0; i < immediate_count; i++) {
+            stringref = (module->stringrefs) + i;
+            read_leb_uint32(p, p_end, string_length);
+
+            if (!(stringref->string_obj = loader_malloc(
+                      sizeof(WASMStringWTF8), error_buf, error_buf_size))) {
+                return false;
+            }
+            string_obj = stringref->string_obj;
+            string_obj->length = string_length;
+            string_obj->is_const = true;
+
+            if (string_length > 0) {
+                total_size = sizeof(uint8) * (uint64)string_length;
+                if (!(string_obj->string_bytes = loader_malloc(
+                          total_size, error_buf, error_buf_size))) {
+                    return false;
+                }
+                string_bytes = string_obj->string_bytes;
+
+                for (j = 0; j < string_length; j++) {
+                    *(string_bytes + j) = read_uint8(p);
+                }
+            }
+        }
+    }
+
+    if (p != p_end) {
+        set_error_buf(error_buf, error_buf_size, "section size mismatch");
+        return false;
+    }
+
+    LOG_VERBOSE("Load stringref section success.\n");
+    return true;
+fail:
+    return false;
+}
+#endif
+#endif
+
 #if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
 static bool
 handle_name_section(const uint8 *buf, const uint8 *buf_end, WASMModule *module,
@@ -4632,6 +4702,15 @@ load_from_sections(WASMModule *module, WASMSection *sections,
                     return false;
                 break;
 #endif
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+            case SECTION_TYPE_STRINGREF:
+                if (!load_stringref_section(buf, buf_end, module, error_buf,
+                                            error_buf_size))
+                    return false;
+                break;
+#endif
+#endif
             default:
                 set_error_buf(error_buf, error_buf_size, "invalid section id");
                 return false;
@@ -5089,6 +5168,11 @@ static uint8 section_ids[] = {
     SECTION_TYPE_FUNC,
     SECTION_TYPE_TABLE,
     SECTION_TYPE_MEMORY,
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+    SECTION_TYPE_STRINGREF,
+#endif
+#endif
     SECTION_TYPE_GLOBAL,
     SECTION_TYPE_EXPORT,
     SECTION_TYPE_START,
@@ -5535,6 +5619,25 @@ wasm_loader_unload(WASMModule *module)
             node = node_next;
         }
     }
+
+#if WASM_ENABLE_GC != 0
+#if WASM_ENABLE_STRINGREF != 0
+    if (module->stringrefs) {
+        for (i = 0; i < module->stringref_count; i++) {
+            WASMStringref *stringref = (module->stringrefs) + i;
+            if (stringref) {
+                WASMStringWTF8 *string_obj = stringref->string_obj;
+                if (string_obj) {
+                    wasm_runtime_free(string_obj->string_bytes);
+                }
+                wasm_runtime_free(string_obj);
+            }
+            wasm_runtime_free(stringref);
+        }
+        wasm_runtime_free(module->stringrefs);
+    }
+#endif
+#endif
 
 #if WASM_ENABLE_FAST_INTERP == 0
     if (module->br_table_cache_list) {
@@ -8211,6 +8314,7 @@ fail:
 #define POP_V128() TEMPLATE_POP(V128)
 #define POP_FUNCREF() TEMPLATE_POP(FUNCREF)
 #define POP_EXTERNREF() TEMPLATE_POP(EXTERNREF)
+#define POP_STRINGREF() TEMPLATE_POP(STRINGREF)
 
 #if WASM_ENABLE_FAST_INTERP != 0
 
@@ -12167,6 +12271,179 @@ re_scan:
                         break;
                     }
 
+#if WASM_ENABLE_STRINGREF != 0
+                    case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_WTF16:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8:
+                    case WASM_OP_STRING_NEW_WTF8:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_CONST:
+                    {
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_MEASURE_UTF8:
+                    case WASM_OP_STRING_MEASURE_WTF8:
+                    case WASM_OP_STRING_MEASURE_WTF16:
+                    {
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRING_ENCODE_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF16:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF8:
+                    {
+                        POP_I32();
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRING_CONCAT:
+                    {
+                        POP_STRINGREF();
+                        POP_STRINGREF();
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_EQ:
+                    {
+                        POP_STRINGREF();
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRING_IS_USV_SEQUENCE:
+                    {
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRING_AS_WTF8:
+                    {
+                        POP_STRINGREF();
+                        PUSH_REF(REF_TYPE_STRINGVIEWWTF8);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
+                        PUSH_I32();
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF8_SLICE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF8);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_AS_WTF16:
+                    {
+                        POP_STRINGREF();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_LENGTH:
+                    {
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_GET_CODEUNIT:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_ENCODE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_WTF16_SLICE:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_AS_ITER:
+                    {
+                        POP_STRINGREF();
+                        PUSH_REF(REF_TYPE_STRINGVIEWITER);
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_NEXT:
+                    {
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_ADVANCE:
+                    case WASM_OP_STRINGVIEW_ITER_REWIND:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_I32();
+                        break;
+                    }
+                    case WASM_OP_STRINGVIEW_ITER_SLICE:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_STRINGVIEWITER);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF16_ARRAY:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF8_ARRAY:
+                    {
+                        POP_I32();
+                        POP_I32();
+                        POP_REF(REF_TYPE_ARRAYREF);
+                        PUSH_REF(REF_TYPE_STRINGREF);
+                        break;
+                    }
+                    case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF16_ARRAY:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
+                    {
+                        POP_I32();
+                        POP_REF(REF_TYPE_ARRAYREF);
+                        POP_STRINGREF();
+                        PUSH_I32();
+                        break;
+                    }
+#endif
                     default:
                         set_error_buf_v(error_buf, error_buf_size,
                                         "%s %02x %02x", "unsupported opcode",

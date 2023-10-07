@@ -66,6 +66,74 @@ bh_strdup(const char *s);
 char *
 wa_strdup(const char *s);
 
+typedef enum encoding_flag {
+    UTF8,
+    WTF8,
+    WTF16,
+    LOSSY_UTF8,
+} encoding_flag;
+
+uint8 *
+encode_8bit_bytes_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                          int32 *target_bytes_length,
+                                          encoding_flag flag);
+
+uint8 *
+encode_8bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
+                                int32 *target_bytes_length);
+
+uint16 *
+encode_16bit_bytes_by_codepoints(uint32 *code_points, uint32 code_points_length,
+                                 int32 *target_bytes_length);
+
+uint32 *
+encode_codepoints_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                          int32 *code_points_length,
+                                          encoding_flag flag);
+
+uint32 *
+encode_codepoints_by_16bit_bytes(uint16 *bytes, int32 bytes_length,
+                                 int32 *code_points_length);
+
+int32
+calculate_encoded_code_units_by_8bit_bytes_with_flag(uint8 *bytes,
+                                                     int32 bytes_length,
+                                                     encoding_flag flag);
+
+void *
+encode_target_bytes_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
+                                            int32 *target_bytes_length,
+                                            encoding_flag flag);
+uint8 *
+concat_8bit_bytes(uint8 *bytes1, int32 bytes_length1, uint8 *bytes2,
+                  int32 bytes_length2, int32 *bytes_length_total,
+                  encoding_flag flag);
+
+uint32
+wtf16_pos_treatment(uint32 pos, uint32 code_units_length);
+
+uint32
+wtf8_string_bytes_advance(uint8 *string_bytes, int32 string_bytes_length,
+                          uint32 pos, uint32 bytes);
+
+int32
+wtf8_string_bytes_iter_next(uint8 *string_bytes, int32 string_bytes_length,
+                            int32 cur_pos, uint32 *code_point);
+
+int32
+wtf8_string_bytes_iter_advance(uint8 *string_bytes, int32 string_bytes_length,
+                               int32 cur_pos, uint32 code_points_count,
+                               uint32 *code_points_consumed);
+
+int32
+wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
+                              int32 cur_pos, uint32 code_points_count,
+                              uint32 *code_points_consumed);
+
+int32
+wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
+                             int32 cur_pos, int32 code_points_count);
+
 #ifdef __cplusplus
 }
 #endif
