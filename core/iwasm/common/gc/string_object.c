@@ -10,11 +10,17 @@ wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data)
 {
     WASMStringWTF8 *string_obj =
         (WASMStringWTF8 *)wasm_stringref_obj_get_value(stringref_obj);
+    WASMRttTypeRef rtt_type =
+        (WASMRttTypeRef)wasm_object_header((WASMObjectRef)stringref_obj);
+
     if (string_obj && !(string_obj->is_const)) {
         if (string_obj->string_bytes) {
             wasm_runtime_free(string_obj->string_bytes);
         }
         wasm_runtime_free(string_obj);
+    }
+    if (rtt_type) {
+        wasm_runtime_free(rtt_type);
     }
 }
 
@@ -25,11 +31,17 @@ wasm_stringview_wtf8_obj_finalizer(
     WASMStringWTF8 *string_obj =
         (WASMStringWTF8 *)wasm_stringview_wtf8_obj_get_value(
             stringview_wtf8_obj);
+    WASMRttTypeRef rtt_type =
+        (WASMRttTypeRef)wasm_object_header((WASMObjectRef)stringview_wtf8_obj);
+
     if (string_obj && !(string_obj->is_const)) {
         if (string_obj->string_bytes) {
             wasm_runtime_free(string_obj->string_bytes);
         }
         wasm_runtime_free(string_obj);
+    }
+    if (rtt_type) {
+        wasm_runtime_free(rtt_type);
     }
 }
 
@@ -40,11 +52,17 @@ wasm_stringview_wtf16_obj_finalizer(
     WASMStringWTF16 *string_obj =
         (WASMStringWTF16 *)wasm_stringview_wtf16_obj_get_value(
             stringview_wtf16_obj);
+    WASMRttTypeRef rtt_type =
+        (WASMRttTypeRef)wasm_object_header((WASMObjectRef)stringview_wtf16_obj);
+
     if (string_obj) {
         if (string_obj->string_bytes) {
             wasm_runtime_free(string_obj->string_bytes);
         }
         wasm_runtime_free(string_obj);
+    }
+    if (rtt_type) {
+        wasm_runtime_free(rtt_type);
     }
 }
 
@@ -55,29 +73,38 @@ wasm_stringview_iter_obj_finalizer(
     WASMStringWTF8 *string_obj =
         (WASMStringWTF8 *)wasm_stringview_iter_obj_get_value(
             stringview_iter_obj);
+    WASMRttTypeRef rtt_type =
+        (WASMRttTypeRef)wasm_object_header((WASMObjectRef)stringview_iter_obj);
     if (string_obj && !(string_obj->is_const)) {
         if (string_obj->string_bytes) {
             wasm_runtime_free(string_obj->string_bytes);
         }
         wasm_runtime_free(string_obj);
     }
+    if (rtt_type) {
+        wasm_runtime_free(rtt_type);
+    }
 }
 
 static WASMStringWTF8 *
-wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length, bool is_const)
+wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
 {
     WASMStringWTF8 *string_obj;
 
     if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
         return NULL;
     }
+    if (!(string_obj->string_bytes =
+              wasm_runtime_malloc(sizeof(uint8) * length))) {
+        return NULL;
+    }
     if (!target_bytes) {
         return NULL;
     }
 
-    string_obj->string_bytes = target_bytes;
+    bh_memcpy_s(string_obj->string_bytes, length, target_bytes, length);
     string_obj->length = length;
-    string_obj->is_const = is_const;
+    string_obj->is_const = false;
 
     return string_obj;
 }
@@ -162,13 +189,12 @@ wasm_stringview_iter_obj_get_bytes(
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
-                                          uint8 *target_bytes, uint32 length,
-                                          bool is_const)
+                                          uint8 *target_bytes, uint32 length)
 {
     WASMStringWTF8 *str_obj;
     WASMStringrefObjectRef stringref_obj;
 
-    str_obj = wasm_stringwtf8_obj_new(target_bytes, length, is_const);
+    str_obj = wasm_stringwtf8_obj_new(target_bytes, length);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
 
     return stringref_obj;
@@ -189,7 +215,7 @@ wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
     string_bytes = encode_8bit_bytes_by_codepoints(
         code_points, code_point_length, &target_bytes_length);
 
-    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length, false);
+    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length);
     stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
 
     if (code_points) {
@@ -419,7 +445,7 @@ wasm_stringref_obj_concat(struct WASMExecEnv *exec_env,
         concat_8bit_bytes(string_bytes1, string_bytes_length1, string_bytes2,
                           string_bytes_length2, &target_bytes_length, flag);
     stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
-        exec_env, target_bytes, target_bytes_length, false);
+        exec_env, target_bytes, target_bytes_length);
 
     return stringref_obj;
 }
@@ -527,7 +553,7 @@ wasm_stringview_iter_obj_slice(struct WASMExecEnv *exec_env,
     end_pos = wtf8_string_bytes_iter_slice(string_bytes, string_bytes_length,
                                            cur_pos, code_points_count);
     stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
-        exec_env, string_bytes + cur_pos, end_pos - cur_pos, false);
+        exec_env, string_bytes + cur_pos, end_pos - cur_pos);
 
     return stringref_obj;
 }
