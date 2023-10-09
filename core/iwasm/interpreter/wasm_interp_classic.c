@@ -2720,6 +2720,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             stringref_obj =
                                 wasm_stringref_obj_new_with_16bit_embedder(
                                     exec_env, target_code_units, bytes_length);
+                            if (target_code_units) {
+                                wasm_runtime_free(target_code_units);
+                            }
                         }
                         else {
                             if (opcode == WASM_OP_STRING_NEW_UTF8) {
@@ -2744,6 +2747,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                 wasm_stringref_obj_new_with_8bit_embedder(
                                     exec_env, target_bytes,
                                     target_bytes_length);
+                            if (target_bytes) {
+                                wasm_runtime_free(target_bytes);
+                            }
                         }
 
                         if (!stringref_obj) {
@@ -3300,6 +3306,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                 wasm_stringref_obj_new_with_8bit_embedder(
                                     exec_env, target_bytes,
                                     target_bytes_length);
+                            if (target_bytes) {
+                                wasm_runtime_free(target_bytes);
+                            }
                         }
                         if (!stringref_obj) {
                             wasm_set_exception(

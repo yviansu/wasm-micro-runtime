@@ -5461,7 +5461,7 @@ wasm_loader_unload(WASMModule *module)
             WASMStringref *stringref = (module->stringrefs) + i;
             if (stringref) {
                 WASMStringWTF8 *string_obj = stringref->string_obj;
-                if (string_obj) {
+                if (string_obj && string_obj->string_bytes) {
                     wasm_runtime_free(string_obj->string_bytes);
                 }
                 wasm_runtime_free(string_obj);

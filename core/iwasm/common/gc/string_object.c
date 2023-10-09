@@ -94,15 +94,20 @@ wasm_stringwtf8_obj_new(uint8 *target_bytes, uint32 length)
     if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
         return NULL;
     }
-    if (!(string_obj->string_bytes =
-              wasm_runtime_malloc(sizeof(uint8) * length))) {
-        return NULL;
+    if (length > 0) {
+        if (!(string_obj->string_bytes =
+                  wasm_runtime_malloc(sizeof(uint8) * length))) {
+            return NULL;
+        }
+        if (!target_bytes) {
+            return NULL;
+        }
+        /* memcpy byte to avoid double-free */
+        bh_memcpy_s(string_obj->string_bytes, length, target_bytes, length);
     }
-    if (!target_bytes) {
-        return NULL;
+    else {
+        string_obj->string_bytes = NULL;
     }
-
-    bh_memcpy_s(string_obj->string_bytes, length, target_bytes, length);
     string_obj->length = length;
     string_obj->is_const = false;
 
@@ -221,6 +226,9 @@ wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
     if (code_points) {
         wasm_runtime_free(code_points);
     }
+    if (string_bytes) {
+        wasm_runtime_free(string_bytes);
+    }
 
     return stringref_obj;
 }
@@ -261,9 +269,30 @@ wasm_stringview_wtf8_obj_new_by_stringref(struct WASMExecEnv *exec_env,
                                           WASMStringrefObjectRef stringref_obj)
 {
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
+    const WASMStringWTF8 *string_obj1;
+    WASMStringWTF8 *string_obj2;
 
-    stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(
-        exec_env, wasm_stringref_obj_get_value(stringref_obj));
+    /* To avoid dangling pointer, we can not reuse the string obj get from
+     * stringref_obj */
+    string_obj1 = wasm_stringref_obj_get_value(stringref_obj);
+    if (!(string_obj2 = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+        return NULL;
+    }
+    if (string_obj1->length > 0) {
+        if (!(string_obj2->string_bytes =
+                  wasm_runtime_malloc(sizeof(uint8) * (string_obj1->length)))) {
+            return NULL;
+        }
+        bh_memcpy_s(string_obj2->string_bytes, string_obj1->length,
+                    string_obj1->string_bytes, string_obj1->length);
+    }
+    else {
+        string_obj2->string_bytes = NULL;
+    }
+    string_obj2->length = string_obj1->length;
+    string_obj2->is_const = false;
+
+    stringview_wtf8_obj = wasm_stringview_wtf8_obj_new(exec_env, string_obj2);
 
     return stringview_wtf8_obj;
 }
@@ -344,9 +373,31 @@ wasm_stringview_iter_obj_new_by_stringref(struct WASMExecEnv *exec_env,
                                           WASMStringrefObjectRef stringref_obj)
 {
     WASMStringviewIterObjectRef stringview_iter_obj;
+    const WASMStringWTF8 *string_obj1;
+    WASMStringWTF8 *string_obj2;
 
-    stringview_iter_obj = wasm_stringview_iter_obj_new(
-        exec_env, wasm_stringref_obj_get_value(stringref_obj), 0);
+    /* To avoid dangling pointer, we can not reuse the string obj get from
+     * stringref_obj */
+    string_obj1 = wasm_stringref_obj_get_value(stringref_obj);
+    if (!(string_obj2 = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+        return NULL;
+    }
+    if (string_obj1->length > 0) {
+        if (!(string_obj2->string_bytes =
+                  wasm_runtime_malloc(sizeof(uint8) * (string_obj1->length)))) {
+            return NULL;
+        }
+        bh_memcpy_s(string_obj2->string_bytes, string_obj1->length,
+                    string_obj1->string_bytes, string_obj1->length);
+    }
+    else {
+        string_obj2->string_bytes = NULL;
+    }
+    string_obj2->length = string_obj1->length;
+    string_obj2->is_const = false;
+
+    stringview_iter_obj =
+        wasm_stringview_iter_obj_new(exec_env, string_obj2, 0);
 
     return stringview_iter_obj;
 }
@@ -446,6 +497,10 @@ wasm_stringref_obj_concat(struct WASMExecEnv *exec_env,
                           string_bytes_length2, &target_bytes_length, flag);
     stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
         exec_env, target_bytes, target_bytes_length);
+
+    if (target_bytes) {
+        wasm_runtime_free(target_bytes);
+    }
 
     return stringref_obj;
 }
@@ -575,6 +630,10 @@ wasm_stringref_obj_convert_char(WASMStringrefObjectRef stringref_obj)
         }
     }
     str[str_len] = '\0';
+
+    if (string_bytes) {
+        wasm_runtime_free(string_bytes);
+    }
 
     return str;
 }
