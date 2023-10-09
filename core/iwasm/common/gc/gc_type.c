@@ -751,7 +751,7 @@ wasm_is_reftype_supers_of_none(uint8 type, const WASMRefType *ref_type,
 {
     if (type == REF_TYPE_NULLREF || type == REF_TYPE_I31REF
         || type == REF_TYPE_STRUCTREF || type == REF_TYPE_ARRAYREF
-        || wasm_is_reftype_supers_of_eq(type))
+        || type == REF_TYPE_STRINGREF || wasm_is_reftype_supers_of_eq(type))
         return true;
 
     if (type == REF_TYPE_HT_NULLABLE && ref_type != NULL
