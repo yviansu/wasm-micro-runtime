@@ -755,6 +755,16 @@ wasm_obj_unset_gc_finalizer(wasm_exec_env_t exec_env, void *obj)
 }
 
 #if WASM_ENABLE_STRINGREF != 0
+void
+wasm_string_obj_rtt_type_finalizer(
+    wasm_obj_t string_obj, void *data)
+{
+    void *rtt_type = (void *)string_obj->header;
+    if (rtt_type) {
+        wasm_runtime_free(rtt_type);
+    }
+}
+
 WASMStringrefObjectRef
 wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 {
@@ -774,6 +784,9 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->str_obj = str_obj;
 
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringref_obj,
+        (wasm_obj_finalizer_t)wasm_string_obj_rtt_type_finalizer, NULL);
     wasm_obj_set_gc_finalizer(
         exec_env, (wasm_obj_t)stringref_obj,
         (wasm_obj_finalizer_t)wasm_stringref_obj_finalizer, NULL);
@@ -802,6 +815,9 @@ wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 
     wasm_obj_set_gc_finalizer(
         exec_env, (wasm_obj_t)stringview_wtf8_obj,
+        (wasm_obj_finalizer_t)wasm_string_obj_rtt_type_finalizer, NULL);
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf8_obj,
         (wasm_obj_finalizer_t)wasm_stringview_wtf8_obj_finalizer, NULL);
 
     return stringview_wtf8_obj;
@@ -826,6 +842,9 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     stringview_wtf16_obj->header = (WASMObjectHeader)rtt_type;
     stringview_wtf16_obj->str_obj = str_obj;
 
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_wtf16_obj,
+        (wasm_obj_finalizer_t)wasm_string_obj_rtt_type_finalizer, NULL);
     wasm_obj_set_gc_finalizer(
         exec_env, (wasm_obj_t)stringview_wtf16_obj,
         (wasm_obj_finalizer_t)wasm_stringview_wtf16_obj_finalizer, NULL);
@@ -854,6 +873,9 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
     stringview_iter_obj->str_obj = str_obj;
     stringview_iter_obj->pos = pos;
 
+    wasm_obj_set_gc_finalizer(
+        exec_env, (wasm_obj_t)stringview_iter_obj,
+        (wasm_obj_finalizer_t)wasm_string_obj_rtt_type_finalizer, NULL);
     wasm_obj_set_gc_finalizer(
         exec_env, (wasm_obj_t)stringview_iter_obj,
         (wasm_obj_finalizer_t)wasm_stringview_iter_obj_finalizer, NULL);

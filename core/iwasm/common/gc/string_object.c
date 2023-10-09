@@ -599,5 +599,12 @@ wasm_stringview_wtf16_obj_convert_char(
     }
     str[str_len] = '\0';
 
+    if (code_points) {
+        wasm_runtime_free(code_points);
+    }
+    if (string_bytes) {
+        wasm_runtime_free(string_bytes);
+    }
+
     return str;
 }
