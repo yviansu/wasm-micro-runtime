@@ -5465,8 +5465,8 @@ wasm_loader_unload(WASMModule *module)
                 }
                 wasm_runtime_free(string_obj);
             }
-            wasm_runtime_free(stringref);
         }
+        wasm_runtime_free(module->stringrefs);
     }
 #endif
 #endif
@@ -12186,7 +12186,7 @@ re_scan:
                     case WASM_OP_STRING_AS_WTF16:
                     {
                         POP_STRINGREF();
-                        POP_REF(REF_TYPE_STRINGVIEWWTF16);
+                        PUSH_REF(REF_TYPE_STRINGVIEWWTF16);
                         break;
                     }
                     case WASM_OP_STRINGVIEW_WTF16_LENGTH:
