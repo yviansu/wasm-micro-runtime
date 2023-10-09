@@ -175,6 +175,12 @@ typedef struct AOTModule {
     void **func_ptrs;
     /* func type indexes of AOTed (un-imported) functions */
     uint32 *func_type_indexes;
+#if WASM_ENABLE_AOT_STACK_FRAME != 0
+    /* max local cell nums of AOTed (un-imported) functions */
+    uint32 *max_local_cell_nums;
+    /* max stack cell nums of AOTed (un-imported) functions */
+    uint32 *max_stack_cell_nums;
+#endif
 
     /* export info */
     uint32 export_count;
@@ -317,12 +323,35 @@ typedef struct AOTFuncPerfProfInfo {
 
 /* AOT auxiliary call stack */
 typedef struct AOTFrame {
+    /* The frame of the caller which is calling current function */
     struct AOTFrame *prev_frame;
-    uint32 func_index;
-#if WASM_ENABLE_PERF_PROFILING != 0
-    uint64 time_started;
+
+    /* The non-imported function index of current function */
+    uintptr_t func_index;
+
+    /* Used when performance profiling is enabled */
+    uintptr_t time_started;
+
+    /* Used when performance profiling is enabled */
     AOTFuncPerfProfInfo *func_perf_prof_info;
-#endif
+
+    /* Instruction pointer: offset to the bytecode array */
+    uintptr_t ip_offset;
+
+    /* Operand stack top pointer of the current frame */
+    uint32 *sp;
+
+    /* Frame ref flags (GC only) */
+    uint8 *frame_ref;
+
+    /**
+     * Frame data, the layout is:
+     *  local area: parameters and local variables
+     *  stack area: wasm operand stack
+     *  frame ref flags (GC only):
+     *      whether each cell in local and stack area is a GC obj
+     */
+    uint32 lp[1];
 } AOTFrame;
 
 #if WASM_ENABLE_STATIC_PGO != 0
@@ -681,6 +710,14 @@ aot_create_func_obj(AOTModuleInstance *module_inst, uint32 func_idx,
 bool
 aot_obj_is_instance_of(AOTModuleInstance *module_inst, WASMObjectRef gc_obj,
                        uint32 type_index);
+
+WASMRttTypeRef
+aot_rtt_type_new(AOTModuleInstance *module_inst, uint32 type_index);
+
+bool
+aot_array_init_with_data(AOTModuleInstance *module_inst, uint32 seg_index,
+                         uint32 data_seg_offset, WASMArrayObjectRef array_obj,
+                         uint32 elem_size, uint32 array_len);
 
 #endif /* end of WASM_ENABLE_GC != 0 */
 
