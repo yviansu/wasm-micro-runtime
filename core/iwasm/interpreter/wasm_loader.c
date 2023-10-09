@@ -6051,6 +6051,47 @@ wasm_loader_find_block_addr(WASMExecEnv *exec_env, BlockAddr *block_addr_cache,
                     case WASM_OP_EXTERN_EXTERNALIZE:
                         break;
 
+                    case WASM_OP_STRING_NEW_UTF8:
+                    case WASM_OP_STRING_NEW_WTF16:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8:
+                    case WASM_OP_STRING_NEW_WTF8:
+                    case WASM_OP_STRING_CONST:
+                    case WASM_OP_STRING_MEASURE_UTF8:
+                    case WASM_OP_STRING_MEASURE_WTF8:
+                    case WASM_OP_STRING_MEASURE_WTF16:
+                    case WASM_OP_STRING_ENCODE_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF16:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRING_ENCODE_WTF8:
+                    case WASM_OP_STRING_CONCAT:
+                    case WASM_OP_STRING_EQ:
+                    case WASM_OP_STRING_IS_USV_SEQUENCE:
+                    case WASM_OP_STRING_AS_WTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
+                    case WASM_OP_STRINGVIEW_WTF8_SLICE:
+                    case WASM_OP_STRING_AS_WTF16:
+                    case WASM_OP_STRINGVIEW_WTF16_LENGTH:
+                    case WASM_OP_STRINGVIEW_WTF16_GET_CODEUNIT:
+                    case WASM_OP_STRINGVIEW_WTF16_ENCODE:
+                    case WASM_OP_STRINGVIEW_WTF16_SLICE:
+                    case WASM_OP_STRING_AS_ITER:
+                    case WASM_OP_STRINGVIEW_ITER_NEXT:
+                    case WASM_OP_STRINGVIEW_ITER_ADVANCE:
+                    case WASM_OP_STRINGVIEW_ITER_REWIND:
+                    case WASM_OP_STRINGVIEW_ITER_SLICE:
+                    case WASM_OP_STRING_NEW_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF16_ARRAY:
+                    case WASM_OP_STRING_NEW_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_NEW_WTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF16_ARRAY:
+                    case WASM_OP_STRING_ENCODE_LOSSY_UTF8_ARRAY:
+                    case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
+                        break;
+
                     default:
                         return false;
                 }
