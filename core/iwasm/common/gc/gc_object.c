@@ -701,6 +701,34 @@ wasm_object_get_ref_list(WASMObjectRef obj, bool *p_is_compact_mode,
         *p_ref_list = NULL;
         return true;
     }
+    else if (rtt_type->type_flag == WASM_TYPE_STRINGREF) {
+        /* stringref object */
+        *p_is_compact_mode = false;
+        *p_ref_num = 0;
+        *p_ref_list = NULL;
+        return true;
+    }
+    else if (rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF8) {
+        /* stringview_wtf8 object */
+        *p_is_compact_mode = false;
+        *p_ref_num = 0;
+        *p_ref_list = NULL;
+        return true;
+    }
+    else if (rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF16) {
+        /* stringview_wtf16 object */
+        *p_is_compact_mode = false;
+        *p_ref_num = 0;
+        *p_ref_list = NULL;
+        return true;
+    }
+    else if (rtt_type->type_flag == WASM_TYPE_STRINGVIEWITER) {
+        /* stringview_iter object */
+        *p_is_compact_mode = false;
+        *p_ref_num = 0;
+        *p_ref_list = NULL;
+        return true;
+    }
     else if (rtt_type->defined_type->type_flag == WASM_TYPE_FUNC) {
         /* function object */
         *p_is_compact_mode = false;
