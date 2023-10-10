@@ -616,12 +616,14 @@ typedef struct BlockAddr {
 typedef struct WASMStringWTF8 {
     uint8 *string_bytes;
     int32 length;
+    int32 ref_count;
     bool is_const;
 } WASMStringWTF8;
 
 typedef struct WASMStringWTF16 {
     uint16 *string_bytes;
     int32 length;
+    int32 ref_count;
 } WASMStringWTF16;
 
 typedef struct WASMStringref {

@@ -7,6 +7,7 @@
 #define _STRING_OBJECT_H_
 
 #include "gc_object.h"
+#include "wasm_runtime_common.h"
 
 struct WASMExecEnv;
 
@@ -27,11 +28,11 @@ wasm_stringview_iter_obj_finalizer(
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_8bit_embedder(struct WASMExecEnv *exec_env,
-                                          uint8 *target_bytes, uint32 length);
+                                          uint8 *bytes, uint32 bytes_length);
 
 WASMStringrefObjectRef
 wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
-                                           uint16 *target_bytes, uint32 length);
+                                           uint16 *bytes, uint32 bytes_length);
 
 WASMStringviewWTF8ObjectRef
 wasm_stringview_wtf8_obj_new_by_stringref(struct WASMExecEnv *exec_env,
@@ -117,4 +118,28 @@ char *
 wasm_stringview_wtf16_obj_convert_char(
     WASMStringviewWTF16ObjectRef stringview_wtf16_obj);
 
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_const(struct WASMExecEnv *exec_env,
+                                  WASMStringWTF8 *str_obj);
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_8bit_memory(struct WASMExecEnv *exec_env,
+                                        void *maddr, uint32 bytes_length,
+                                        encoding_flag flag);
+WASMStringrefObjectRef
+wasm_stringref_obj_new_with_16bit_memory(struct WASMExecEnv *exec_env,
+                                         void *maddr, uint32 bytes_length);
+int32
+wasm_stringref_obj_encode_with_8bit_memory(struct WASMExecEnv *exec_env,
+                                           void *maddr,
+                                           WASMStringrefObjectRef stringref_obj,
+                                           encoding_flag flag);
+int32
+wasm_stringref_obj_encode_with_16bit_memory(
+    struct WASMExecEnv *exec_env, void *maddr,
+    WASMStringrefObjectRef stringref_obj, encoding_flag flag);
+int32
+wasm_stringview_wtf8_obj_advance(
+    struct WASMExecEnv *exec_env,
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj, uint32 pos,
+    uint32 bytes_length);
 #endif /* end of _STRING_OBJECT_H_ */

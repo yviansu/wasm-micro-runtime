@@ -3739,6 +3739,7 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
             string_obj = stringref->string_obj;
             string_obj->length = string_length;
             string_obj->is_const = true;
+            string_obj->ref_count = 0;
 
             if (string_length > 0) {
                 total_size = sizeof(uint8) * (uint64)string_length;

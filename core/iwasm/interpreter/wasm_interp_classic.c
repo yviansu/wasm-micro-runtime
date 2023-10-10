@@ -2689,11 +2689,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_NEW_WTF8:
                     {
                         uint32 mem_idx, addr, bytes_length, align;
-                        int32 target_bytes_length;
                         WASMMemoryInstance *memory_inst;
                         encoding_flag flag = WTF8;
-                        uint8 *target_bytes;
-                        uint16 *target_code_units;
 
                         read_leb_uint32(frame_ip, frame_ip_end, mem_idx);
                         bytes_length = POP_I32();
@@ -2706,23 +2703,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = WTF16;
                             align = 1;
                             CHECK_ATOMIC_MEMORY_ACCESS();
-                            if (!(target_code_units = wasm_runtime_malloc(
-                                      sizeof(uint16) * bytes_length))) {
-                                wasm_set_exception(module,
-                                                   "alloc memory for "
-                                                   "target_code_units failed");
-                                goto got_exception;
-                            }
-                            for (i = 0; i < bytes_length; i++) {
-                                target_code_units[i] =
-                                    LOAD_I16(maddr + (i * 2));
-                            }
                             stringref_obj =
-                                wasm_stringref_obj_new_with_16bit_embedder(
-                                    exec_env, target_code_units, bytes_length);
-                            if (target_code_units) {
-                                wasm_runtime_free(target_code_units);
-                            }
+                                wasm_stringref_obj_new_with_16bit_memory(
+                                    exec_env, maddr, bytes_length);
                         }
                         else {
                             if (opcode == WASM_OP_STRING_NEW_UTF8) {
@@ -2734,22 +2717,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             else if (opcode == WASM_OP_STRING_NEW_WTF8) {
                                 flag = WTF8;
                             }
-                            target_bytes =
-                                encode_8bit_bytes_by_8bit_bytes_with_flag(
-                                    maddr, bytes_length, &target_bytes_length,
-                                    flag);
-                            if (target_bytes_length == -1) {
-                                wasm_set_exception(
-                                    module, "isolated surrogate is seen");
-                                goto got_exception;
-                            }
                             stringref_obj =
-                                wasm_stringref_obj_new_with_8bit_embedder(
-                                    exec_env, target_bytes,
-                                    target_bytes_length);
-                            if (target_bytes) {
-                                wasm_runtime_free(target_bytes);
-                            }
+                                wasm_stringref_obj_new_with_8bit_memory(
+                                    exec_env, maddr, bytes_length, flag);
                         }
 
                         if (!stringref_obj) {
@@ -2770,10 +2740,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         string_obj =
                             ((wasm_module->stringrefs) + contents)->string_obj;
-                        stringref_obj =
-                            wasm_stringref_obj_new_with_8bit_embedder(
-                                exec_env, string_obj->string_bytes,
-                                string_obj->length);
+                        stringref_obj = wasm_stringref_obj_new_with_const(
+                            exec_env, string_obj);
                         if (!stringref_obj) {
                             wasm_set_exception(
                                 module, "create stringref object failed");
@@ -2814,8 +2782,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         uint32 mem_idx, addr;
                         int32 target_bytes_length;
-                        uint8 *target_bytes;
-                        uint16 *target_code_units;
                         WASMMemoryInstance *memory_inst;
                         encoding_flag flag = WTF8;
 
@@ -2829,17 +2795,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         if (opcode == WASM_OP_STRING_ENCODE_WTF16) {
                             flag = WTF16;
                             target_bytes_length =
-                                wasm_stringref_obj_measure(stringref_obj, flag);
-                            target_code_units =
-                                (uint16 *)wasm_stringref_obj_encode_with_flag(
-                                    stringref_obj, flag);
-                            for (i = 0; i < (uint32)target_bytes_length; i++) {
-                                STORE_U16(maddr + (i * 2),
-                                          target_code_units[i]);
-                            }
-                            if (target_code_units) {
-                                wasm_runtime_free(target_code_units);
-                            }
+                                wasm_stringref_obj_encode_with_16bit_memory(
+                                    exec_env, maddr, stringref_obj, flag);
                         }
                         else {
                             if (opcode == WASM_OP_STRING_ENCODE_UTF8) {
@@ -2853,20 +2810,19 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                                 flag = WTF8;
                             }
                             target_bytes_length =
-                                wasm_stringref_obj_measure(stringref_obj, flag);
-                            target_bytes =
-                                (uint8 *)wasm_stringref_obj_encode_with_flag(
-                                    stringref_obj, flag);
+                                wasm_stringref_obj_encode_with_8bit_memory(
+                                    exec_env, maddr, stringref_obj, flag);
+
                             if (target_bytes_length == -1) {
                                 wasm_set_exception(
                                     module, "isolated surrogate is seen");
                                 goto got_exception;
                             }
-                            bh_memcpy_s(maddr, target_bytes_length,
-                                        target_bytes, target_bytes_length);
-                            if (target_bytes) {
-                                wasm_runtime_free(target_bytes);
-                            }
+                        }
+                        if (target_bytes_length < 0) {
+                            wasm_set_exception(module,
+                                               "stringref encode failed");
+                            goto got_exception;
                         }
 
                         PUSH_I32(target_bytes_length);
@@ -2933,20 +2889,14 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     }
                     case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
                     {
-                        uint32 pos, bytes, next_pos, string_bytes_length;
-                        uint8 *string_bytes;
+                        uint32 next_pos, bytes, pos;
 
                         bytes = POP_I32();
                         pos = POP_I32();
                         stringview_wtf8_obj = POP_REF();
 
-                        string_bytes = wasm_stringview_wtf8_obj_get_bytes(
-                            stringview_wtf8_obj);
-                        string_bytes_length =
-                            wasm_stringview_wtf8_obj_get_length(
-                                stringview_wtf8_obj);
-                        next_pos = wtf8_string_bytes_advance(
-                            string_bytes, string_bytes_length, pos, bytes);
+                        next_pos = wasm_stringview_wtf8_obj_advance(
+                            exec_env, stringview_wtf8_obj, pos, bytes);
 
                         PUSH_I32(next_pos);
                         HANDLE_OP_END();
