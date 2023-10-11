@@ -869,8 +869,8 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
     WASMStringviewIterObjectRef stringview_iter_obj;
     WASMRttTypeRef rtt_type;
 
-    if (!(stringview_iter_obj = gc_obj_malloc(
-              heap_handle, sizeof(WASMStringviewIterObjectRef)))) {
+    if (!(stringview_iter_obj =
+              gc_obj_malloc(heap_handle, sizeof(WASMStringviewIterObject)))) {
         return NULL;
     }
     if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
