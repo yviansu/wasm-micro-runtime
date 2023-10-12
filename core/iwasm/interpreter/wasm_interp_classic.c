@@ -5594,11 +5594,11 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
             /* Initialize the interpreter context. */
             frame->function = cur_func;
-            frame_ip = frame->ip = wasm_get_func_code(cur_func);
+            frame_ip = wasm_get_func_code(cur_func);
             frame_ip_end = wasm_get_func_code_end(cur_func);
             frame_lp = frame->lp;
 
-            frame_sp = frame->sp = frame->sp_bottom =
+            frame_sp = frame->sp_bottom =
                 frame_lp + cur_func->param_cell_num + cur_func->local_cell_num;
             frame->sp_boundary =
                 frame->sp_bottom + cur_wasm_func->max_stack_cell_num;
