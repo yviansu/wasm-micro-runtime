@@ -746,6 +746,13 @@ wasm_is_reftype_supers_of_extern(uint8 type)
 }
 
 inline static bool
+wasm_is_reftype_supers_of_string(uint8 type)
+{
+    return (type == REF_TYPE_STRINGREF || type == REF_TYPE_ANYREF) ? true
+                                                                   : false;
+}
+
+inline static bool
 wasm_is_reftype_supers_of_none(uint8 type, const WASMRefType *ref_type,
                                const WASMTypePtr *types, uint32 type_count)
 {
@@ -876,7 +883,7 @@ wasm_reftype_is_subtype_of(uint8 type1, const WASMRefType *ref_type1,
         return wasm_is_reftype_supers_of_noextern(type2);
     }
     else if (type1 == REF_TYPE_STRINGREF) {
-        return type2 == REF_TYPE_STRINGREF ? true : false;
+        return wasm_is_reftype_supers_of_string(type2);
     }
     else if (type1 == REF_TYPE_STRINGVIEWWTF8) {
         return type2 == REF_TYPE_STRINGVIEWWTF8 ? true : false;
