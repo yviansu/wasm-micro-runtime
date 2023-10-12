@@ -978,45 +978,34 @@ wasm_stringview_iter_obj_update_pos(
     stringview_iter_obj->pos = pos;
 }
 
+#define WASM_OBJ_IS_STRINGREF_IMPL(flag)                \
+    WASMRttTypeRef rtt_type;                            \
+                                                        \
+    bh_assert(obj);                                     \
+                                                        \
+    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))   \
+        return false;                                   \
+                                                        \
+    rtt_type = (WASMRttTypeRef)wasm_object_header(obj); \
+    return rtt_type->type_flag == flag ? true : false
+
 bool
 wasm_obj_is_stringref_obj(WASMObjectRef obj)
 {
-    WASMRttTypeRef rtt_type;
-
-    bh_assert(obj);
-
-    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
-        return false;
-
-    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
-    return rtt_type->type_flag == WASM_TYPE_STRINGREF ? true : false;
+    WASM_OBJ_IS_STRINGREF_IMPL(WASM_TYPE_STRINGREF);
 }
 
 bool
 wasm_obj_is_stringview_wtf8_obj(WASMObjectRef obj)
 {
-    WASMRttTypeRef rtt_type;
-
-    bh_assert(obj);
-
-    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
-        return false;
-
-    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
-    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF8 ? true : false;
+    WASM_OBJ_IS_STRINGREF_IMPL(WASM_TYPE_STRINGVIEWWTF8);
 }
 
 bool
 wasm_obj_is_stringview_wtf16_obj(WASMObjectRef obj)
 {
-    WASMRttTypeRef rtt_type;
-
-    bh_assert(obj);
-
-    if (wasm_obj_is_i31_externref_or_anyref_obj(obj))
-        return false;
-
-    rtt_type = (WASMRttTypeRef)wasm_object_header(obj);
-    return rtt_type->type_flag == WASM_TYPE_STRINGVIEWWTF16 ? true : false;
+    WASM_OBJ_IS_STRINGREF_IMPL(WASM_TYPE_STRINGVIEWWTF16);
 }
-#endif
+#undef WASM_OBJ_IS_STRINGREF_IMPL
+
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
