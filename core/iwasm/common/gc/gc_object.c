@@ -783,22 +783,70 @@ wasm_obj_unset_gc_finalizer(wasm_exec_env_t exec_env, void *obj)
 }
 
 #if WASM_ENABLE_STRINGREF != 0
+WASMRttTypeRef
+wasm_stringref_rtt_type_new(uint16 type_flag, WASMRttType **rtt_types,
+                            korp_mutex *rtt_type_lock)
+{
+    WASMRttType *rtt_type;
+    uint32 index;
+
+    bh_assert(type_flag >= WASM_TYPE_STRINGREF
+              && type_flag <= WASM_TYPE_STRINGVIEWITER);
+
+    index = type_flag - WASM_TYPE_STRINGREF;
+
+    os_mutex_lock(rtt_type_lock);
+
+    if (rtt_types[index]) {
+        os_mutex_unlock(rtt_type_lock);
+        return rtt_types[index];
+    }
+
+    if ((rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+        memset(rtt_type, 0, sizeof(WASMRttType));
+        rtt_type->type_flag = type_flag;
+
+        rtt_types[index] = rtt_type;
+    }
+
+    os_mutex_unlock(rtt_type_lock);
+    return rtt_type;
+}
+
 WASMStringrefObjectRef
 wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 {
     void *heap_handle = get_gc_heap_handle(exec_env);
     WASMStringrefObjectRef stringref_obj;
-    WASMRttTypeRef rtt_type;
+    WASMModuleInstanceCommon *module_inst =
+        wasm_runtime_get_module_inst(exec_env);
+    WASMRttTypeRef rtt_type = NULL;
 
     if (!(stringref_obj =
               gc_obj_malloc(heap_handle, sizeof(WASMStringrefObject)))) {
         return NULL;
     }
-    if (!(rtt_type = wasm_runtime_malloc(sizeof(WASMRttType)))) {
+
+#if WASM_ENABLE_INTERP != 0
+    if (module_inst->module_type == Wasm_Module_Bytecode) {
+        WASMModule *module = ((WASMModuleInstance *)module_inst)->module;
+        rtt_type = wasm_stringref_rtt_type_new(
+            WASM_TYPE_STRINGREF, module->rtt_types, &module->rtt_type_lock);
+    }
+#endif
+#if WASM_ENABLE_AOT != 0
+    if (module_inst->module_type == Wasm_Module_AoT) {
+        AOTModule *module =
+            (AOTModule *)((AOTModuleInstance *)module_inst)->module;
+        rtt_type = wasm_stringref_rtt_type_new(
+            WASM_TYPE_STRINGREF, module->rtt_types, &module->rtt_type_lock);
+    }
+#endif
+
+    if (!rtt_type) {
         return NULL;
     }
 
-    rtt_type->type_flag = WASM_TYPE_STRINGREF;
     stringref_obj->header = (WASMObjectHeader)rtt_type;
     stringref_obj->str_obj = str_obj;
 

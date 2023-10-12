@@ -172,10 +172,13 @@ typedef void *table_elem_type_t;
 #define WASM_TYPE_FUNC 0
 #define WASM_TYPE_STRUCT 1
 #define WASM_TYPE_ARRAY 2
+
+#if WASM_ENABLE_STRINGREF != 0
 #define WASM_TYPE_STRINGREF 3
 #define WASM_TYPE_STRINGVIEWWTF8 4
 #define WASM_TYPE_STRINGVIEWWTF16 5
 #define WASM_TYPE_STRINGVIEWITER 6
+#endif
 
 typedef struct WASMModule WASMModule;
 typedef struct WASMFunction WASMFunction;
@@ -808,6 +811,15 @@ struct WASMModule {
     HashMap *ref_type_set;
     struct WASMRttType **rtt_types;
     korp_mutex rtt_type_lock;
+#if WASM_ENABLE_STRINGREF != 0
+    /* special rtts for stringref types
+        - stringref
+        - stringview_wtf8
+        - stringview_wtf16
+        - stringview_iter
+     */
+    struct WASMRttType *stringref_rtts[4];
+#endif
 #endif
 
 #if WASM_ENABLE_DEBUG_INTERP != 0 || WASM_ENABLE_DEBUG_AOT != 0

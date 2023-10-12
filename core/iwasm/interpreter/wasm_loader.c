@@ -5551,6 +5551,12 @@ wasm_loader_unload(WASMModule *module)
         }
         wasm_runtime_free(module->rtt_types);
     }
+#if WASM_ENABLE_STRINGREF != 0
+    for (i = 0; i < WASM_TYPE_STRINGVIEWITER - WASM_TYPE_STRINGREF + 1; i++) {
+        if (module->stringref_rtts[i])
+            wasm_runtime_free(module->stringref_rtts[i]);
+    }
+#endif
 #endif
 
     wasm_runtime_free(module);
