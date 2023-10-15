@@ -12185,6 +12185,9 @@ re_scan:
                         uint32 memidx;
 
                         read_leb_uint32(p, p_end, memidx);
+#if WASM_ENABLE_FAST_INTERP != 0
+                        emit_uint32(loader_ctx, (uint32)memidx);
+#endif
                         POP_I32();
                         POP_I32();
                         PUSH_REF(REF_TYPE_STRINGREF);
@@ -12196,6 +12199,9 @@ re_scan:
                         uint32 contents;
 
                         read_leb_uint32(p, p_end, contents);
+#if WASM_ENABLE_FAST_INTERP != 0
+                        emit_uint32(loader_ctx, (uint32)contents);
+#endif
                         PUSH_REF(REF_TYPE_STRINGREF);
                         (void)contents;
                         break;
@@ -12216,6 +12222,9 @@ re_scan:
                         uint32 memidx;
 
                         read_leb_uint32(p, p_end, memidx);
+#if WASM_ENABLE_FAST_INTERP != 0
+                        emit_uint32(loader_ctx, (uint32)memidx);
+#endif
                         POP_I32();
                         POP_STRINGREF();
                         PUSH_I32();
@@ -12262,6 +12271,9 @@ re_scan:
                         uint32 memidx;
 
                         read_leb_uint32(p, p_end, memidx);
+#if WASM_ENABLE_FAST_INTERP != 0
+                        emit_uint32(loader_ctx, (uint32)memidx);
+#endif
                         POP_I32();
                         POP_I32();
                         POP_I32();
@@ -12303,6 +12315,9 @@ re_scan:
                         uint32 memidx;
 
                         read_leb_uint32(p, p_end, memidx);
+#if WASM_ENABLE_FAST_INTERP != 0
+                        emit_uint32(loader_ctx, (uint32)memidx);
+#endif
                         POP_I32();
                         POP_I32();
                         POP_I32();

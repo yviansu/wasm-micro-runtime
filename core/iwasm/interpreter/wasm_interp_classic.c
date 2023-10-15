@@ -3233,7 +3233,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         PUSH_I32(target_bytes_length);
                         HANDLE_OP_END();
                     }
-#endif
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
                     default:
                     {
                         wasm_set_exception(module, "unsupported opcode");
