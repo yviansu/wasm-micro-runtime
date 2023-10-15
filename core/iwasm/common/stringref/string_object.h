@@ -186,8 +186,8 @@ wasm_stringref_obj_encode_with_16bit_array(struct WASMExecEnv *exec_env,
 
 /******************* application functions *****************/
 
-char *
-wasm_stringref_obj_convert_char(WASMStringrefObjectRef stringref_obj);
+void
+wasm_stringref_obj_dump(WASMStringrefObjectRef stringref_obj);
 
 char *
 wasm_stringview_wtf8_obj_convert_char(

@@ -245,8 +245,14 @@ wasm_is_refheaptype_common(const RefHeapType_Common *ref_heap_type)
 {
     return ((ref_heap_type->heap_type >= (int32)HEAP_TYPE_EQ
              && ref_heap_type->heap_type <= (int32)HEAP_TYPE_FUNC)
+#if WASM_ENABLE_STRINGREF != 0
+            || (ref_heap_type->heap_type >= (int32)HEAP_TYPE_STRINGVIEWITER
+                && ref_heap_type->heap_type <= (int32)HEAP_TYPE_I31)
+#else
             || (ref_heap_type->heap_type >= (int32)HEAP_TYPE_NONE
-                && ref_heap_type->heap_type <= (int32)HEAP_TYPE_I31))
+                && ref_heap_type->heap_type <= (int32)HEAP_TYPE_I31)
+#endif
+                )
                ? true
                : false;
 }

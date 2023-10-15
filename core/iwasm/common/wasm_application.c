@@ -723,13 +723,7 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                         os_printf("ref.func");
 #if WASM_ENABLE_STRINGREF != 0
                     else if (wasm_obj_is_stringref_obj(gc_obj)) {
-                        char *str = NULL;
-                        str = wasm_stringref_obj_convert_char(
-                            (WASMStringrefObjectRef)gc_obj);
-                        os_printf("%s", str);
-                        if (str) {
-                            wasm_runtime_free(str);
-                        }
+                        wasm_stringref_obj_dump((WASMStringrefObjectRef)gc_obj);
                     }
                     else if (wasm_obj_is_stringview_wtf8_obj(gc_obj)) {
                         char *str = NULL;

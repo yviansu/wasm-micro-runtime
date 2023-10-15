@@ -656,6 +656,14 @@ wasm_obj_is_type_of(WASMObjectRef obj, int32 heap_type)
             return wasm_obj_is_struct_obj(obj);
         case HEAP_TYPE_ARRAY:
             return wasm_obj_is_array_obj(obj);
+#if WASM_ENABLE_STRINGREF != 0
+        case HEAP_TYPE_STRINGREF:
+            return wasm_obj_is_stringref_obj(obj);
+        case HEAP_TYPE_STRINGVIEWWTF8:
+            return wasm_obj_is_stringview_wtf8_obj(obj);
+        case HEAP_TYPE_STRINGVIEWWTF16:
+            return wasm_obj_is_stringview_wtf16_obj(obj);
+#endif
         case HEAP_TYPE_NONE:
         case HEAP_TYPE_NOFUNC:
         case HEAP_TYPE_NOEXTERN:
@@ -830,8 +838,9 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
 #if WASM_ENABLE_INTERP != 0
     if (module_inst->module_type == Wasm_Module_Bytecode) {
         WASMModule *module = ((WASMModuleInstance *)module_inst)->module;
-        rtt_type = wasm_stringref_rtt_type_new(
-            WASM_TYPE_STRINGREF, module->rtt_types, &module->rtt_type_lock);
+        rtt_type = wasm_stringref_rtt_type_new(WASM_TYPE_STRINGREF,
+                                               module->stringref_rtts,
+                                               &module->rtt_type_lock);
     }
 #endif
 #if WASM_ENABLE_AOT != 0

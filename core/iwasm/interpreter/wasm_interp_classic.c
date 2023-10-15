@@ -1432,7 +1432,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                 goto got_exception;
             }
 
-            HANDLE_OP(WASM_OP_NOP) { HANDLE_OP_END(); }
+            HANDLE_OP(WASM_OP_NOP)
+            {
+                HANDLE_OP_END();
+            }
 
             HANDLE_OP(EXT_OP_BLOCK)
             {
@@ -2699,6 +2702,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         memory_inst = module->memories[mem_idx];
                         maddr = memory_inst->memory_data + addr;
 
+                        SYNC_ALL_TO_FRAME();
                         if (opcode == WASM_OP_STRING_NEW_WTF16) {
                             flag = WTF16;
                             align = 1;
@@ -2738,6 +2742,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         read_leb_uint32(frame_ip, frame_ip_end, contents);
 
+                        SYNC_ALL_TO_FRAME();
                         string_obj =
                             ((wasm_module->stringrefs) + contents)->string_obj;
                         stringref_obj = wasm_stringref_obj_new_with_const(
@@ -2835,6 +2840,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         stringref_obj2 = POP_REF();
                         stringref_obj1 = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringref_obj = wasm_stringref_obj_concat(
                             exec_env, stringref_obj1, stringref_obj2);
                         if (!stringref_obj) {
@@ -2876,6 +2882,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         stringref_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringview_wtf8_obj =
                             wasm_stringview_wtf8_obj_new_by_stringref(
                                 exec_env, stringref_obj);
@@ -2954,6 +2961,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         start = POP_I32();
                         stringview_wtf8_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringref_obj = wasm_stringview_wtf8_obj_slice(
                             exec_env, stringview_wtf8_obj, start, end);
                         if (!stringref_obj) {
@@ -2969,6 +2977,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         stringref_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringview_wtf16_obj =
                             wasm_stringview_wtf16_obj_new_by_stringref(
                                 exec_env, stringref_obj);
@@ -3043,6 +3052,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         start = POP_I32();
                         stringview_wtf16_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringref_obj = wasm_stringview_wtf16_obj_slice(
                             exec_env, stringview_wtf16_obj, start, end);
                         if (!stringref_obj) {
@@ -3058,6 +3068,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     {
                         stringref_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringview_iter_obj =
                             wasm_stringview_iter_obj_new_by_stringref(
                                 exec_env, stringref_obj);
@@ -3113,6 +3124,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         code_points_count = POP_I32();
                         stringview_iter_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         stringref_obj = wasm_stringview_iter_obj_slice(
                             exec_env, stringview_iter_obj, code_points_count);
                         if (!stringref_obj) {
@@ -3136,6 +3148,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         start = POP_I32();
                         array_obj = POP_REF();
 
+                        SYNC_ALL_TO_FRAME();
                         if (opcode == WASM_OP_STRING_NEW_WTF16_ARRAY) {
                             stringref_obj =
                                 wasm_stringref_obj_new_with_16bit_array(
@@ -4676,7 +4689,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
             HANDLE_OP(WASM_OP_I32_REINTERPRET_F32)
             HANDLE_OP(WASM_OP_I64_REINTERPRET_F64)
             HANDLE_OP(WASM_OP_F32_REINTERPRET_I32)
-            HANDLE_OP(WASM_OP_F64_REINTERPRET_I64) { HANDLE_OP_END(); }
+            HANDLE_OP(WASM_OP_F64_REINTERPRET_I64)
+            {
+                HANDLE_OP_END();
+            }
 
             HANDLE_OP(WASM_OP_I32_EXTEND8_S)
             {

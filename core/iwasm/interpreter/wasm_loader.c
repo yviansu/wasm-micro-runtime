@@ -6064,27 +6064,40 @@ wasm_loader_find_block_addr(WASMExecEnv *exec_env, BlockAddr *block_addr_cache,
                     case WASM_OP_STRING_NEW_WTF16:
                     case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
+                        skip_leb_uint32(p, p_end); /* memory index 0x00 */
+                        break;
                     case WASM_OP_STRING_CONST:
+                        skip_leb_int32(p, p_end); /* contents */
+                        break;
                     case WASM_OP_STRING_MEASURE_UTF8:
                     case WASM_OP_STRING_MEASURE_WTF8:
                     case WASM_OP_STRING_MEASURE_WTF16:
+                        break;
                     case WASM_OP_STRING_ENCODE_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF16:
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF8:
+                        skip_leb_uint32(p, p_end); /* memory index 0x00 */
+                        break;
                     case WASM_OP_STRING_CONCAT:
                     case WASM_OP_STRING_EQ:
                     case WASM_OP_STRING_IS_USV_SEQUENCE:
                     case WASM_OP_STRING_AS_WTF8:
                     case WASM_OP_STRINGVIEW_WTF8_ADVANCE:
+                        break;
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_UTF8:
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
+                        skip_leb_uint32(p, p_end); /* memory index 0x00 */
+                        break;
                     case WASM_OP_STRINGVIEW_WTF8_SLICE:
                     case WASM_OP_STRING_AS_WTF16:
                     case WASM_OP_STRINGVIEW_WTF16_LENGTH:
                     case WASM_OP_STRINGVIEW_WTF16_GET_CODEUNIT:
+                        break;
                     case WASM_OP_STRINGVIEW_WTF16_ENCODE:
+                        skip_leb_uint32(p, p_end); /* memory index 0x00 */
+                        break;
                     case WASM_OP_STRINGVIEW_WTF16_SLICE:
                     case WASM_OP_STRING_AS_ITER:
                     case WASM_OP_STRINGVIEW_ITER_NEXT:
@@ -8423,6 +8436,13 @@ fail:
             bh_assert(_ref_type);                                            \
             bh_memcpy_s(&wasm_ref_type, sizeof(WASMRefType), _ref_type,      \
                         wasm_reftype_struct_size(_ref_type));                \
+            if (wasm_is_reftype_htref_nullable(local_type)) {                \
+                if (wasm_is_refheaptype_common(&_ref_type->ref_ht_common)) { \
+                    local_type =                                             \
+                        (uint8)((int32)0x80                                  \
+                                + _ref_type->ref_ht_common.heap_type);       \
+                }                                                            \
+            }                                                                \
         }                                                                    \
     } while (0)
 #endif
@@ -11904,7 +11924,12 @@ re_scan:
                         }
                         else {
                             if (heap_type > HEAP_TYPE_FUNC
-                                || heap_type < HEAP_TYPE_NONE) {
+#if WASM_ENABLE_STRINGREF != 0
+                                || heap_type < HEAP_TYPE_STRINGVIEWITER
+#else
+                                || heap_type < HEAP_TYPE_NONE
+#endif
+                            ) {
                                 set_error_buf(error_buf, error_buf_size,
                                               "unknown type");
                                 goto fail;
@@ -11922,10 +11947,15 @@ re_scan:
                             bool nullable =
                                 (opcode1 == WASM_OP_REF_CAST_NULLABLE) ? true
                                                                        : false;
-                            wasm_set_refheaptype_typeidx(
-                                &wasm_ref_type.ref_ht_typeidx, nullable,
-                                heap_type);
-                            PUSH_REF(wasm_ref_type.ref_type);
+                            if (heap_type >= 0) {
+                                wasm_set_refheaptype_typeidx(
+                                    &wasm_ref_type.ref_ht_typeidx, nullable,
+                                    heap_type);
+                                PUSH_REF(wasm_ref_type.ref_type);
+                            }
+                            else {
+                                PUSH_REF((uint8)((int32)0x80 + heap_type));
+                            }
                         }
                         break;
                     }
@@ -12152,14 +12182,22 @@ re_scan:
                     case WASM_OP_STRING_NEW_LOSSY_UTF8:
                     case WASM_OP_STRING_NEW_WTF8:
                     {
+                        uint32 memidx;
+
+                        read_leb_uint32(p, p_end, memidx);
                         POP_I32();
                         POP_I32();
                         PUSH_REF(REF_TYPE_STRINGREF);
+                        (void)memidx;
                         break;
                     }
                     case WASM_OP_STRING_CONST:
                     {
+                        uint32 contents;
+
+                        read_leb_uint32(p, p_end, contents);
                         PUSH_REF(REF_TYPE_STRINGREF);
+                        (void)contents;
                         break;
                     }
                     case WASM_OP_STRING_MEASURE_UTF8:
@@ -12175,9 +12213,13 @@ re_scan:
                     case WASM_OP_STRING_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRING_ENCODE_WTF8:
                     {
+                        uint32 memidx;
+
+                        read_leb_uint32(p, p_end, memidx);
                         POP_I32();
                         POP_STRINGREF();
                         PUSH_I32();
+                        (void)memidx;
                         break;
                     }
                     case WASM_OP_STRING_CONCAT:
@@ -12217,12 +12259,16 @@ re_scan:
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
                     {
+                        uint32 memidx;
+
+                        read_leb_uint32(p, p_end, memidx);
                         POP_I32();
                         POP_I32();
                         POP_I32();
                         POP_REF(REF_TYPE_STRINGVIEWWTF8);
                         PUSH_I32();
                         PUSH_I32();
+                        (void)memidx;
                         break;
                     }
                     case WASM_OP_STRINGVIEW_WTF8_SLICE:
@@ -12254,11 +12300,15 @@ re_scan:
                     }
                     case WASM_OP_STRINGVIEW_WTF16_ENCODE:
                     {
+                        uint32 memidx;
+
+                        read_leb_uint32(p, p_end, memidx);
                         POP_I32();
                         POP_I32();
                         POP_I32();
                         POP_REF(REF_TYPE_STRINGVIEWWTF16);
                         PUSH_I32();
+                        (void)memidx;
                         break;
                     }
                     case WASM_OP_STRINGVIEW_WTF16_SLICE:

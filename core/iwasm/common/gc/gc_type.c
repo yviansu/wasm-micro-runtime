@@ -616,7 +616,12 @@ wasm_reftype_size(uint8 type)
         return 4;
     else if (type == VALUE_TYPE_I64 || type == VALUE_TYPE_F64)
         return 8;
+#if WASM_ENABLE_STRINGREF != 0
+    else if (type >= (uint8)REF_TYPE_STRINGVIEWITER
+             && type <= (uint8)REF_TYPE_FUNCREF)
+#else
     else if (type >= (uint8)REF_TYPE_NULLREF && type <= (uint8)REF_TYPE_FUNCREF)
+#endif
         return sizeof(uintptr_t);
     else if (type == PACKED_TYPE_I8)
         return 1;
@@ -914,6 +919,11 @@ wasm_reftype_is_subtype_of(uint8 type1, const WASMRefType *ref_type1,
             else if (types[ref_type1->ref_ht_typeidx.type_idx]->type_flag
                      == WASM_TYPE_FUNC)
                 return wasm_is_reftype_supers_of_func(type2);
+#if WASM_ENABLE_STRINGREF != 0
+            else if (types[ref_type1->ref_ht_typeidx.type_idx]->type_flag
+                     == WASM_TYPE_STRINGREF)
+                return wasm_is_reftype_supers_of_string(type2);
+#endif
             else
                 return false;
         }
@@ -1038,6 +1048,11 @@ wasm_reftype_is_subtype_of(uint8 type1, const WASMRefType *ref_type1,
                     /* (ref func) <: [funcref] */
                     return wasm_is_reftype_supers_of_func(type2);
                 }
+#if WASM_ENABLE_STRINGREF != 0
+                else if (heap_type == HEAP_TYPE_STRINGREF) {
+                    return wasm_is_reftype_supers_of_string(type2);
+                }
+#endif
                 else if (heap_type == HEAP_TYPE_NONE) {
                     /* (ref none) */
                     /* TODO */

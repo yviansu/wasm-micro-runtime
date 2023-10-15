@@ -34,6 +34,10 @@ typedef enum wasm_value_type_enum {
     VALUE_TYPE_STRUCTREF = 0x67,
     VALUE_TYPE_ARRAYREF = 0x66,
     VALUE_TYPE_NULLREF = 0x65,
+    VALUE_TYPE_STRINGREF = 0X64,
+    VALUE_TYPE_STRINGVIEWWTF8 = 0x63,
+    VALUE_TYPE_STRINGVIEWWTF16 = 0x62,
+    VALUE_TYPE_STRINGVIEWITER = 0x61
 } wasm_value_type_enum;
 
 typedef int32_t wasm_heap_type_t;

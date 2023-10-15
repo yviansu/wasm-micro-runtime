@@ -1008,29 +1008,25 @@ wasm_stringref_obj_encode_with_16bit_array(struct WASMExecEnv *exec_env,
 
 /******************* application functions *****************/
 
-char *
-wasm_stringref_obj_convert_char(WASMStringrefObjectRef stringref_obj)
+void
+wasm_stringref_obj_dump(WASMStringrefObjectRef stringref_obj)
 {
-    char *str;
     int32 str_len, i;
     uint8 *string_bytes;
 
     str_len = wasm_stringref_obj_measure(stringref_obj, WTF8);
     string_bytes =
         (uint8 *)wasm_stringref_obj_encode_with_flag(stringref_obj, WTF8);
-    str = wasm_runtime_malloc(sizeof(char) * (str_len + 1));
+
     if (str_len != 0) {
         for (i = 0; i < str_len; i++) {
-            str[i] = string_bytes[i];
+            os_printf("%c", string_bytes[i]);
         }
     }
-    str[str_len] = '\0';
 
     if (string_bytes) {
         wasm_runtime_free(string_bytes);
     }
-
-    return str;
 }
 
 char *
