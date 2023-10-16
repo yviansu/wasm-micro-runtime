@@ -1484,7 +1484,6 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
     WASMStringrefObjectRef stringref_obj;
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj;
     WASMStringviewWTF16ObjectRef stringview_wtf16_obj;
-    WASMStringWTF8 *string_obj;
     WASMStringviewIterObjectRef stringview_iter_obj;
 #endif
 #endif
@@ -2676,10 +2675,10 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         contents = (uint32)read_uint32(frame_ip);
 
                         SYNC_ALL_TO_FRAME();
-                        string_obj =
-                            ((wasm_module->stringrefs) + contents)->string_obj;
+
+                        /* TODO: add cache */
                         stringref_obj = wasm_stringref_obj_new_with_const(
-                            exec_env, string_obj);
+                            exec_env, wasm_module->stringref_consts[contents]);
                         if (!stringref_obj) {
                             wasm_set_exception(
                                 module, "create stringref object failed");

@@ -377,6 +377,39 @@ typedef struct WASMArrayType {
        described with one byte */
     WASMRefType *elem_ref_type;
 } WASMArrayType;
+
+#if WASM_ENABLE_STRINGREF != 0
+/* stringref representation, we define it as a void * pointer here, the
+ * stringref implementation can use any structure */
+/*
+    WasmGC heap
+    +-----------------------+
+    |                       |
+    |   stringref           |
+    |   +----------+        |             external string representation
+    |   | host_ptr |--------o------+----->+------------+
+    |   +----------+        |      |      |            |
+    |                       |      |      +------------+
+    |   stringview_wtf8/16  |      |
+    |   +----------+        |      |
+    |   | host_ptr |--------o------+
+    |   +----------+        |      |
+    |                       |      |
+    |   stringview_iter     |      |
+    |   +----------+        |      |
+    |   | host_ptr |--------o------+
+    |   +----------+        |
+    |   |   pos    |        |
+    |   +----------+        |
+    |                       |
+    +-----------------------+
+*/
+typedef void *WASMString;
+
+typedef struct WASMStringref {
+    WASMString string_obj;
+} WASMStringref;
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
 #endif /* end of WASM_ENABLE_GC != 0 */
 
 typedef struct WASMTable {
@@ -614,23 +647,6 @@ typedef struct BlockAddr {
     uint8 *end_addr;
 } BlockAddr;
 
-typedef struct WASMStringWTF8 {
-    uint8 *string_bytes;
-    int32 length;
-    int32 ref_count;
-    bool is_const;
-} WASMStringWTF8;
-
-typedef struct WASMStringWTF16 {
-    uint16 *string_bytes;
-    int32 length;
-    int32 ref_count;
-} WASMStringWTF16;
-
-typedef struct WASMStringref {
-    WASMStringWTF8 *string_obj;
-} WASMStringref;
-
 #if WASM_ENABLE_LIBC_WASI != 0
 typedef struct WASIArguments {
     const char **dir_list;
@@ -750,7 +766,7 @@ struct WASMModule {
     uint32 start_function;
 #if WASM_ENABLE_GC != 0
 #if WASM_ENABLE_STRINGREF != 0
-    WASMStringref *stringrefs;
+    char **stringref_consts;
 #endif
 #endif
 

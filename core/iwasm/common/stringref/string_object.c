@@ -5,6 +5,19 @@
 
 #include "string_object.h"
 
+typedef struct WASMStringWTF8 {
+    uint8 *string_bytes;
+    int32 length;
+    int32 ref_count;
+    bool is_const;
+} WASMStringWTF8;
+
+typedef struct WASMStringWTF16 {
+    uint16 *string_bytes;
+    int32 length;
+    int32 ref_count;
+} WASMStringWTF16;
+
 /******************* gc finalizer *****************/
 
 void
@@ -328,15 +341,27 @@ wasm_stringref_obj_new_with_16bit_embedder(struct WASMExecEnv *exec_env,
 
 /* string.const */
 WASMStringrefObjectRef
-wasm_stringref_obj_new_with_const(struct WASMExecEnv *exec_env,
-                                  WASMStringWTF8 *str_obj)
+wasm_stringref_obj_new_with_const(struct WASMExecEnv *exec_env, WASMString str)
 {
-    WASMStringrefObjectRef stringref_obj;
+    WASMStringWTF8 *string_obj;
+    uint32_t string_length = 0;
 
-    str_obj->ref_count++;
-    stringref_obj = wasm_stringref_obj_new(exec_env, str_obj);
+    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+        return false;
+    }
 
-    return stringref_obj;
+    string_obj->length = string_length = strlen(str);
+    string_obj->is_const = true;
+    string_obj->ref_count = 0;
+
+    if (string_length > 0) {
+        if (!(string_obj->string_bytes = (uint8 *)bh_strdup(str))) {
+            wasm_runtime_free(string_obj);
+            return false;
+        }
+    }
+
+    return wasm_stringref_obj_new(exec_env, string_obj);
 }
 
 /* string.new_xx8 */

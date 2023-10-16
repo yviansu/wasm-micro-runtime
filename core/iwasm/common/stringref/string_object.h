@@ -32,8 +32,7 @@ wasm_stringview_iter_obj_finalizer(
 
 /* string.const */
 WASMStringrefObjectRef
-wasm_stringref_obj_new_with_const(struct WASMExecEnv *exec_env,
-                                  WASMStringWTF8 *str_obj);
+wasm_stringref_obj_new_with_const(struct WASMExecEnv *exec_env, void *str_obj);
 
 /* string.new_xx8 */
 WASMStringrefObjectRef

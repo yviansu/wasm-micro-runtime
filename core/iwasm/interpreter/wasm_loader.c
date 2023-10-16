@@ -3708,10 +3708,8 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
 {
     const uint8 *p = buf, *p_end = buf_end;
     int32 deferred_count, immediate_count, string_length, i, j;
-    uint8 *string_bytes;
     uint64 total_size;
-    WASMStringref *stringref;
-    WASMStringWTF8 *string_obj;
+    uint8 *str_content;
 
     read_leb_uint32(p, p_end, deferred_count);
     read_leb_uint32(p, p_end, immediate_count);
@@ -3722,36 +3720,25 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
     }
 
     if (immediate_count > 0) {
-        total_size = sizeof(WASMStringref) * (uint64)immediate_count;
-        if (!(module->stringrefs =
+        total_size = sizeof(char *) * (uint64)immediate_count;
+        if (!(module->stringref_consts =
                   loader_malloc(total_size, error_buf, error_buf_size))) {
             goto fail;
         }
         module->stringref_count = immediate_count;
 
         for (i = 0; i < immediate_count; i++) {
-            stringref = (module->stringrefs) + i;
             read_leb_uint32(p, p_end, string_length);
 
-            if (!(stringref->string_obj = loader_malloc(
-                      sizeof(WASMStringWTF8), error_buf, error_buf_size))) {
-                return false;
+            if (!(module->stringref_consts[i] = loader_malloc(
+                      string_length + 1, error_buf, error_buf_size))) {
+                goto fail;
             }
-            string_obj = stringref->string_obj;
-            string_obj->length = string_length;
-            string_obj->is_const = true;
-            string_obj->ref_count = 0;
+            str_content = (uint8 *)module->stringref_consts[i];
 
             if (string_length > 0) {
-                total_size = sizeof(uint8) * (uint64)string_length;
-                if (!(string_obj->string_bytes = loader_malloc(
-                          total_size, error_buf, error_buf_size))) {
-                    return false;
-                }
-                string_bytes = string_obj->string_bytes;
-
                 for (j = 0; j < string_length; j++) {
-                    *(string_bytes + j) = read_uint8(p);
+                    *(str_content + j) = read_uint8(p);
                 }
             }
         }
@@ -3764,11 +3751,12 @@ load_stringref_section(const uint8 *buf, const uint8 *buf_end,
 
     LOG_VERBOSE("Load stringref section success.\n");
     return true;
+
 fail:
     return false;
 }
-#endif
-#endif
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
+#endif /* end of WASM_ENABLE_GC != 0 */
 
 #if WASM_ENABLE_CUSTOM_NAME_SECTION != 0
 static bool
@@ -5458,18 +5446,14 @@ wasm_loader_unload(WASMModule *module)
 
 #if WASM_ENABLE_GC != 0
 #if WASM_ENABLE_STRINGREF != 0
-    if (module->stringrefs) {
+    if (module->stringref_consts) {
         for (i = 0; i < module->stringref_count; i++) {
-            WASMStringref *stringref = (module->stringrefs) + i;
-            if (stringref) {
-                WASMStringWTF8 *string_obj = stringref->string_obj;
-                if (string_obj && string_obj->string_bytes) {
-                    wasm_runtime_free(string_obj->string_bytes);
-                }
-                wasm_runtime_free(string_obj);
+            char *contents = module->stringref_consts[i];
+            if (contents) {
+                wasm_runtime_free(contents);
             }
         }
-        wasm_runtime_free(module->stringrefs);
+        wasm_runtime_free(module->stringref_consts);
     }
 #endif
 #endif
