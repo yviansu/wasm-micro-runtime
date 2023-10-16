@@ -406,9 +406,6 @@ typedef struct WASMArrayType {
 */
 typedef void *WASMString;
 
-typedef struct WASMStringref {
-    WASMString string_obj;
-} WASMStringref;
 #endif /* end of WASM_ENABLE_STRINGREF != 0 */
 #endif /* end of WASM_ENABLE_GC != 0 */
 
@@ -741,6 +738,7 @@ struct WASMModule {
 #if WASM_ENABLE_GC != 0
 #if WASM_ENABLE_STRINGREF != 0
     uint32 stringref_count;
+    char **string_consts;
 #endif
 #endif
 
@@ -764,11 +762,6 @@ struct WASMModule {
     WASMTableSeg *table_segments;
     WASMDataSeg **data_segments;
     uint32 start_function;
-#if WASM_ENABLE_GC != 0
-#if WASM_ENABLE_STRINGREF != 0
-    char **stringref_consts;
-#endif
-#endif
 
     /* total global variable size */
     uint32 global_data_size;

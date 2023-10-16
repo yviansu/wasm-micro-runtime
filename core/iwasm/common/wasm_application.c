@@ -722,26 +722,16 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
                     else if (wasm_obj_is_func_obj(gc_obj))
                         os_printf("ref.func");
 #if WASM_ENABLE_STRINGREF != 0
-                    else if (wasm_obj_is_stringref_obj(gc_obj)) {
-                        wasm_stringref_obj_dump((WASMStringrefObjectRef)gc_obj);
-                    }
-                    else if (wasm_obj_is_stringview_wtf8_obj(gc_obj)) {
-                        char *str = NULL;
-                        str = wasm_stringview_wtf8_obj_convert_char(
-                            (WASMStringviewWTF8ObjectRef)gc_obj);
-                        os_printf("%s", str);
-                        if (str) {
-                            wasm_runtime_free(str);
-                        }
+                    else if (wasm_obj_is_stringref_obj(gc_obj)
+                             || wasm_obj_is_stringview_wtf8_obj(gc_obj)) {
+                        wasm_stringref_obj_dump(
+                            (WASMString)wasm_stringref_obj_get_value(gc_obj),
+                            UTF8);
                     }
                     else if (wasm_obj_is_stringview_wtf16_obj(gc_obj)) {
-                        char *str = NULL;
-                        str = wasm_stringview_wtf16_obj_convert_char(
-                            (WASMStringviewWTF16ObjectRef)gc_obj);
-                        os_printf("%s", str);
-                        if (str) {
-                            wasm_runtime_free(str);
-                        }
+                        wasm_stringref_obj_dump(
+                            (WASMString)wasm_stringref_obj_get_value(gc_obj),
+                            WTF16);
                     }
 #endif
                     else if (wasm_obj_is_externref_obj(gc_obj)) {
