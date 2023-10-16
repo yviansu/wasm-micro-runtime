@@ -441,8 +441,7 @@ static dtor_t g_context_dtors[WASM_MAX_INSTANCE_CONTEXTS];
 
 static void
 dtor_noop(WASMModuleInstanceCommon *inst, void *ctx)
-{
-}
+{}
 
 void *
 wasm_native_create_context_key(void (*dtor)(WASMModuleInstanceCommon *inst,
