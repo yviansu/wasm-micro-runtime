@@ -709,6 +709,7 @@ wasm_object_get_ref_list(WASMObjectRef obj, bool *p_is_compact_mode,
         *p_ref_list = NULL;
         return true;
     }
+#if WASM_ENABLE_STRINGREF != 0
     else if (rtt_type->type_flag == WASM_TYPE_STRINGREF) {
         /* stringref object */
         *p_is_compact_mode = false;
@@ -737,6 +738,7 @@ wasm_object_get_ref_list(WASMObjectRef obj, bool *p_is_compact_mode,
         *p_ref_list = NULL;
         return true;
     }
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
     else if (rtt_type->defined_type->type_flag == WASM_TYPE_FUNC) {
         /* function object */
         *p_is_compact_mode = false;
@@ -847,6 +849,7 @@ wasm_stringref_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModule *module =
             (AOTModule *)((AOTModuleInstance *)module_inst)->module;
+        /* TODO: add stringref_rtts in AOTModule */
         rtt_type = wasm_stringref_rtt_type_new(
             WASM_TYPE_STRINGREF, module->rtt_types, &module->rtt_type_lock);
     }
@@ -892,6 +895,7 @@ wasm_stringview_wtf8_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModule *module =
             (AOTModule *)((AOTModuleInstance *)module_inst)->module;
+        /* TODO: add stringref_rtts in AOTModule */
         rtt_type = wasm_stringref_rtt_type_new(WASM_TYPE_STRINGVIEWWTF8,
                                                module->rtt_types,
                                                &module->rtt_type_lock);
@@ -938,6 +942,7 @@ wasm_stringview_wtf16_obj_new(WASMExecEnv *exec_env, const void *str_obj)
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModule *module =
             (AOTModule *)((AOTModuleInstance *)module_inst)->module;
+        /* TODO: add stringref_rtts in AOTModule */
         rtt_type = wasm_stringref_rtt_type_new(WASM_TYPE_STRINGVIEWWTF16,
                                                module->rtt_types,
                                                &module->rtt_type_lock);
@@ -985,6 +990,7 @@ wasm_stringview_iter_obj_new(WASMExecEnv *exec_env, const void *str_obj,
     if (module_inst->module_type == Wasm_Module_AoT) {
         AOTModule *module =
             (AOTModule *)((AOTModuleInstance *)module_inst)->module;
+        /* TODO: add stringref_rtts in AOTModule */
         rtt_type = wasm_stringref_rtt_type_new(WASM_TYPE_STRINGVIEWITER,
                                                module->rtt_types,
                                                &module->rtt_type_lock);
