@@ -2988,10 +2988,9 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
 
                         stringview_wtf16_obj = POP_REF();
 
-                        code_units_length = wasm_string_measure(
+                        code_units_length = wasm_string_wtf16_get_length(
                             (WASMString)wasm_stringview_wtf16_obj_get_value(
-                                stringview_wtf16_obj),
-                            WTF16);
+                                stringview_wtf16_obj));
 
                         PUSH_I32(code_units_length);
                         HANDLE_OP_END();

@@ -25,16 +25,19 @@ typedef enum StringViewType {
 
 /******************* gc finalizer *****************/
 void
-wasm_stringref_obj_finalizer(WASMString str_obj, void *data);
+wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data);
 
 void
-wasm_stringview_wtf8_obj_finalizer(WASMString str_obj, void *data);
+wasm_stringview_wtf8_obj_finalizer(
+    WASMStringviewWTF8ObjectRef stringview_wtf8_obj, void *data);
 
 void
-wasm_stringview_wtf16_obj_finalizer(WASMString str_obj, void *data);
+wasm_stringview_wtf16_obj_finalizer(
+    WASMStringviewWTF16ObjectRef stringview_wtf16_obj, void *data);
 
 void
-wasm_stringview_iter_obj_finalizer(WASMString str_obj, void *data);
+wasm_stringview_iter_obj_finalizer(
+    WASMStringviewIterObjectRef stringview_iter_obj, void *data);
 
 /******************* opcode functions *****************/
 
@@ -49,9 +52,12 @@ WASMString
 wasm_string_new_with_encoding(void *addr, uint32 count, EncodingFlag flag);
 
 /* string.measure */
-/* stringview_wtf16.length */
 int32
 wasm_string_measure(WASMString str_obj, EncodingFlag flag);
+
+/* stringview_wtf16.length */
+int32
+wasm_string_wtf16_get_length(WASMString str_obj);
 
 /* string.encode_xx8 */
 /* string.encode_wtf16 */
@@ -110,6 +116,6 @@ wasm_string_rewind(WASMString str_obj, uint32 pos, uint32 count,
 /******************* application functions *****************/
 
 void
-wasm_stringref_obj_dump(WASMString str_obj, EncodingFlag flag);
+wasm_string_dump(WASMString str_obj, EncodingFlag flag);
 
 #endif /* end of _STRING_OBJECT_H_ */

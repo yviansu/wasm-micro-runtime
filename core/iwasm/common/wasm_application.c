@@ -724,13 +724,14 @@ execute_func(WASMModuleInstanceCommon *module_inst, const char *name,
 #if WASM_ENABLE_STRINGREF != 0
                     else if (wasm_obj_is_stringref_obj(gc_obj)
                              || wasm_obj_is_stringview_wtf8_obj(gc_obj)) {
-                        wasm_stringref_obj_dump(
+                        wasm_string_dump(
                             (WASMString)wasm_stringref_obj_get_value(gc_obj),
                             UTF8);
                     }
                     else if (wasm_obj_is_stringview_wtf16_obj(gc_obj)) {
-                        wasm_stringref_obj_dump(
-                            (WASMString)wasm_stringref_obj_get_value(gc_obj),
+                        wasm_string_dump(
+                            (WASMString)wasm_stringview_wtf16_obj_get_value(
+                                gc_obj),
                             WTF16);
                     }
 #endif
