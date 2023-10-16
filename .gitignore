@@ -18,10 +18,6 @@ core/app-framework/wgl
 core/iwasm/libraries/lib-wasi-threads/test/*.wasm
 core/iwasm/libraries/lib-socket/test/*.wasm
 
-output/
-**/*build_debug/
-gdb/
-
 wamr-sdk/out/
 wamr-sdk/runtime/build_runtime_sdk/
 test-tools/host-tool/bin/

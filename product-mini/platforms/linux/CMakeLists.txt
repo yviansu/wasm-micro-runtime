@@ -18,24 +18,6 @@ set (CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 set (CMAKE_C_STANDARD 99)
 set (CMAKE_CXX_STANDARD 17)
 
-if (USE_SANITIZER EQUAL 1)
-    message("Sanitizer enabled")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=signed-integer-overflow  \
-                        -fsanitize=undefined -fsanitize=address  \
-                        -fno-sanitize=bounds,bounds-strict,alignment \
-                        -fno-sanitize-recover -Wall -Werror -Wformat")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=signed-integer-overflow  \
-                        -fsanitize=undefined -fsanitize=address  \
-                        -fno-sanitize=bounds,bounds-strict,alignment \
-                        -fno-sanitize-recover -Wall -Werror -Wformat")
-endif ()
-
-if (WAMR_GC_IN_EVERY_ALLOCATION EQUAL 1)
-    message("* Garbage collection in every allocation: on")
-    # Force GC in every allocation during testing
-    add_definitions(-DGC_IN_EVERY_ALLOCATION=1)
-endif()
-
 # Set WAMR_BUILD_TARGET, currently values supported:
 # "X86_64", "AMD_64", "X86_32", "AARCH64[sub]", "ARM[sub]", "THUMB[sub]",
 # "MIPS", "XTENSA", "RISCV64[sub]", "RISCV32[sub]"
