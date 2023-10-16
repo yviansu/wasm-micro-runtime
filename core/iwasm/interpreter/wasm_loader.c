@@ -925,6 +925,14 @@ resolve_value_type(const uint8 **p_buf, const uint8 *buf_end,
                                    error_buf, error_buf_size))
             return false;
         *p_need_ref_type_map = true;
+#if WASM_ENABLE_STRINGREF != 0
+        /* covert (ref string) to stringref */
+        if (wasm_is_refheaptype_stringrefs(&ref_type->ref_ht_common)) {
+            ref_type->ref_type =
+                (uint8)((int32)0x80 + ref_type->ref_ht_common.heap_type);
+            *p_need_ref_type_map = false;
+        }
+#endif
     }
     else {
         /* type which can be represented by one byte */
@@ -8406,6 +8414,37 @@ fail:
 #if WASM_ENABLE_GC == 0
 #define GET_LOCAL_REFTYPE() (void)0
 #else
+#if WASM_ENABLE_STRINGREF != 0
+#define GET_LOCAL_REFTYPE()                                                    \
+    do {                                                                       \
+        if (wasm_is_type_multi_byte_type(local_type)) {                        \
+            WASMRefType *_ref_type;                                            \
+            if (local_idx < param_count)                                       \
+                _ref_type = wasm_reftype_map_find(                             \
+                    param_reftype_maps, param_reftype_map_count, local_idx);   \
+            else                                                               \
+                _ref_type = wasm_reftype_map_find(local_reftype_maps,          \
+                                                  local_reftype_map_count,     \
+                                                  local_idx - param_count);    \
+            bh_assert(_ref_type);                                              \
+            bh_memcpy_s(&wasm_ref_type, sizeof(WASMRefType), _ref_type,        \
+                        wasm_reftype_struct_size(_ref_type));                  \
+            if (wasm_is_reftype_htref_nullable(local_type)) {                  \
+                if (wasm_is_refheaptype_common(&_ref_type->ref_ht_common)) {   \
+                    local_type =                                               \
+                        (uint8)((int32)0x80                                    \
+                                + _ref_type->ref_ht_common.heap_type);         \
+                }                                                              \
+            }                                                                  \
+            /* covert (ref string) to stringref */                             \
+            else if (wasm_is_refheaptype_stringrefs(                           \
+                         &_ref_type->ref_ht_common)) {                         \
+                local_type =                                                   \
+                    (uint8)((int32)0x80 + _ref_type->ref_ht_common.heap_type); \
+            }                                                                  \
+        }                                                                      \
+    } while (0)
+#else
 #define GET_LOCAL_REFTYPE()                                                  \
     do {                                                                     \
         if (wasm_is_type_multi_byte_type(local_type)) {                      \
@@ -8429,7 +8468,8 @@ fail:
             }                                                                \
         }                                                                    \
     } while (0)
-#endif
+#endif /* end of WASM_ENABLE_STRINGREF != 0 */
+#endif /* end of WASM_ENABLE_GC == 0 */
 
 #define GET_LOCAL_INDEX_TYPE_AND_OFFSET()                              \
     do {                                                               \
