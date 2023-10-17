@@ -53,19 +53,6 @@ is_BMP_code_point(uint32 code_point)
     return (code_point <= 0xFFFF);
 }
 
-// static bool
-// is_isolated_surrogate_pair(uint32 high, uint32 low)
-// {
-//     return is_isolated_surrogate(high) && is_isolated_surrogate(low);
-// }
-
-// static bool
-// is_isolated_surrogate_unpair(uint32 code_point)
-// {
-//     return is_isolated_surrogate(code_point)
-//            && !is_isolated_surrogate_pair(code_point, code_point);
-// }
-
 static bool
 is_wtf8_codepoint_start(uint8 *bytes, uint32 pos)
 {
@@ -119,19 +106,6 @@ align_wtf8_reverse(uint8 *bytes, uint32 pos, uint32 bytes_length)
 
     return pos - 3;
 }
-
-// static bool
-// has_isolated_surrogate(uint32 *code_points, uint32 code_points_length)
-// {
-//     uint32 i;
-
-//     for (i = 0; i < code_points_length; i++) {
-//         if (is_isolated_surrogate(*(code_points + i))) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
 
 static void
 decode_codepoints_to_8bit_bytes(uint32 *code_points, uint32 code_points_length,
@@ -458,34 +432,6 @@ calculate_encoded_16bit_bytes_length_by_codepoints(uint32 *code_points,
 
     return target_bytes_length;
 }
-
-// static uint16 *
-// encode_16bit_bytes_by_codepoints(uint32 *code_points, uint32
-// code_points_length,
-//                                  int32 *target_bytes_length)
-// {
-//     uint16 *target_bytes;
-
-//     *target_bytes_length =
-//     calculate_encoded_16bit_bytes_length_by_codepoints(
-//         code_points, code_points_length);
-
-//     if (*target_bytes_length > 0) {
-//         if (!(target_bytes = wasm_runtime_malloc(sizeof(uint16)
-//                                                  * (*target_bytes_length))))
-//                                                  {
-//             return NULL;
-//         }
-//         /* get target bytes */
-//         decode_codepoints_to_16bit_bytes(code_points, code_points_length,
-//                                          target_bytes, NULL);
-//     }
-//     else {
-//         target_bytes = NULL;
-//     }
-
-//     return target_bytes;
-// }
 
 static uint32 *
 encode_codepoints_by_8bit_bytes_with_flag(uint8 *bytes, int32 bytes_length,
