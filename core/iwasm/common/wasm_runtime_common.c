@@ -3565,6 +3565,12 @@ wasm_runtime_invoke_native_raw(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
             {
                 bh_memcpy_s(argv_dst, sizeof(uintptr_t), argv_src,
                             sizeof(uintptr_t));
@@ -3628,6 +3634,12 @@ wasm_runtime_invoke_native_raw(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
             {
                 bh_memcpy_s(argv_ret, sizeof(uintptr_t), argv1,
                             sizeof(uintptr_t));
@@ -3730,6 +3742,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
 #if WASM_ENABLE_GC == 0 && WASM_ENABLE_REF_TYPES != 0
             case VALUE_TYPE_FUNCREF:
@@ -3888,6 +3906,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
 #if WASM_ENABLE_GC == 0 && WASM_ENABLE_REF_TYPES != 0
             case VALUE_TYPE_FUNCREF:
@@ -4107,6 +4131,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
 #if WASM_ENABLE_GC == 0 && WASM_ENABLE_REF_TYPES != 0
             case VALUE_TYPE_FUNCREF:
@@ -4253,6 +4283,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
 #if WASM_ENABLE_GC == 0 && WASM_ENABLE_REF_TYPES != 0
             case VALUE_TYPE_FUNCREF:
@@ -4353,6 +4389,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
 #if WASM_ENABLE_GC == 0 && WASM_ENABLE_REF_TYPES != 0
             case VALUE_TYPE_FUNCREF:
@@ -4612,6 +4654,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
                 if (n_ints < MAX_REG_INTS)
                     ints[n_ints++] = *(uint64 *)argv_src;
@@ -4715,6 +4763,12 @@ wasm_runtime_invoke_native(WASMExecEnv *exec_env, void *func_ptr,
             case REF_TYPE_STRUCTREF:
             case REF_TYPE_ARRAYREF:
             case REF_TYPE_NULLREF:
+#if WASM_ENABLE_STRINGREF != 0
+            case REF_TYPE_STRINGREF:
+            case REF_TYPE_STRINGVIEWWTF8:
+            case REF_TYPE_STRINGVIEWWTF16:
+            case REF_TYPE_STRINGVIEWITER:
+#endif
 #endif
                 PUT_I64_TO_ADDR(argv_ret,
                                 invokeNative_Int64(func_ptr, argv1, n_stacks));
