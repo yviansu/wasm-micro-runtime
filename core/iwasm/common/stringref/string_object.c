@@ -5,18 +5,21 @@
 
 #include "string_object.h"
 
-typedef struct WASMStringWTF8 {
-    uint8 *string_bytes;
+typedef enum SourceFlag {
+    Bit8,
+    Bit16,
+} SourceFlag;
+
+typedef struct WASMStringImpl {
     int32 length;
     int32 ref_count;
     bool is_const;
-} WASMStringWTF8;
-
-typedef struct WASMStringWTF16 {
-    uint16 *string_bytes;
-    int32 length;
-    int32 ref_count;
-} WASMStringWTF16;
+    SourceFlag source_flag;
+    union {
+        uint8 *bytes;
+        uint16 *code_units;
+    } u;
+} WASMStringImpl;
 
 /******************* encoding utilities *****************/
 
@@ -818,15 +821,15 @@ wtf8_string_bytes_iter_slice(uint8 *string_bytes, int32 string_bytes_length,
 void
 wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data)
 {
-    WASMStringWTF8 *string_obj = (WASMStringWTF8 *)stringref_obj->str_obj;
+    WASMStringImpl *string_obj = (WASMStringImpl *)stringref_obj->str_obj;
 
     if (string_obj) {
         string_obj->ref_count--;
     }
     if (string_obj && string_obj->ref_count == 0) {
         if (!(string_obj->is_const)) {
-            if (string_obj->string_bytes) {
-                wasm_runtime_free(string_obj->string_bytes);
+            if (string_obj->u.bytes) {
+                wasm_runtime_free(string_obj->u.bytes);
             }
         }
         wasm_runtime_free(string_obj);
@@ -837,15 +840,15 @@ void
 wasm_stringview_wtf8_obj_finalizer(
     WASMStringviewWTF8ObjectRef stringview_wtf8_obj, void *data)
 {
-    WASMStringWTF8 *string_obj = (WASMStringWTF8 *)stringview_wtf8_obj->str_obj;
+    WASMStringImpl *string_obj = (WASMStringImpl *)stringview_wtf8_obj->str_obj;
 
     if (string_obj) {
         string_obj->ref_count--;
     }
     if (string_obj && string_obj->ref_count == 0) {
         if (!(string_obj->is_const)) {
-            if (string_obj->string_bytes) {
-                wasm_runtime_free(string_obj->string_bytes);
+            if (string_obj->u.bytes) {
+                wasm_runtime_free(string_obj->u.bytes);
             }
         }
         wasm_runtime_free(string_obj);
@@ -856,15 +859,17 @@ void
 wasm_stringview_wtf16_obj_finalizer(
     WASMStringviewWTF16ObjectRef stringview_wtf16_obj, void *data)
 {
-    WASMStringWTF16 *string_obj =
-        (WASMStringWTF16 *)stringview_wtf16_obj->str_obj;
+    WASMStringImpl *string_obj =
+        (WASMStringImpl *)stringview_wtf16_obj->str_obj;
 
     if (string_obj) {
         string_obj->ref_count--;
     }
     if (string_obj && string_obj->ref_count == 0) {
-        if (string_obj->string_bytes) {
-            wasm_runtime_free(string_obj->string_bytes);
+        if (!(string_obj->is_const)) {
+            if (string_obj->u.code_units) {
+                wasm_runtime_free(string_obj->u.code_units);
+            }
         }
         wasm_runtime_free(string_obj);
     }
@@ -874,15 +879,15 @@ void
 wasm_stringview_iter_obj_finalizer(
     WASMStringviewIterObjectRef stringview_iter_obj, void *data)
 {
-    WASMStringWTF8 *string_obj = (WASMStringWTF8 *)stringview_iter_obj->str_obj;
+    WASMStringImpl *string_obj = (WASMStringImpl *)stringview_iter_obj->str_obj;
 
     if (string_obj) {
         string_obj->ref_count--;
     }
     if (string_obj && string_obj->ref_count == 0) {
         if (!(string_obj->is_const)) {
-            if (string_obj->string_bytes) {
-                wasm_runtime_free(string_obj->string_bytes);
+            if (string_obj->u.bytes) {
+                wasm_runtime_free(string_obj->u.bytes);
             }
         }
         wasm_runtime_free(string_obj);
@@ -894,7 +899,7 @@ wasm_stringview_iter_obj_finalizer(
 static int32
 wasm_string_get_length(WASMString str_obj)
 {
-    WASMStringWTF8 *string_obj = str_obj;
+    WASMStringImpl *string_obj = str_obj;
     int32 length = 0;
 
     if (string_obj) {
@@ -907,27 +912,27 @@ wasm_string_get_length(WASMString str_obj)
 static uint8 *
 wasm_string_get_bytes(WASMString str_obj)
 {
-    WASMStringWTF8 *string_obj = str_obj;
+    WASMStringImpl *string_obj = str_obj;
     uint8 *string_bytes = NULL;
 
     if (string_obj) {
-        string_bytes = string_obj->string_bytes;
+        string_bytes = string_obj->u.bytes;
     }
 
     return string_bytes;
 }
 
 static uint16 *
-wasm_string_wtf16_get_bytes(WASMString str_obj)
+wasm_string_get_codeunits(WASMString str_obj)
 {
-    WASMStringWTF16 *string_obj = str_obj;
-    uint16 *string_bytes = NULL;
+    WASMStringImpl *string_obj = str_obj;
+    uint16 *code_units = NULL;
 
     if (string_obj) {
-        string_bytes = string_obj->string_bytes;
+        code_units = string_obj->u.code_units;
     }
 
-    return string_bytes;
+    return code_units;
 }
 
 static int32
@@ -937,6 +942,7 @@ wasm_string_measure_from_start(WASMString str_obj, EncodingFlag flag,
     int32 string_bytes_length, target_bytes_length;
     uint8 *string_bytes;
 
+    bh_assert(((WASMStringImpl *)str_obj)->source_flag == Bit8);
     string_bytes = wasm_string_get_bytes(str_obj);
     string_bytes_length = wasm_string_get_length(str_obj);
     target_bytes_length = calculate_encoded_code_units_by_8bit_bytes_with_flag(
@@ -952,6 +958,7 @@ wasm_string_encode_with_flag(WASMString str_obj, EncodingFlag flag)
     uint8 *string_bytes;
     void *target_bytes = NULL;
 
+    bh_assert(((WASMStringImpl *)str_obj)->source_flag == Bit8);
     string_bytes = wasm_string_get_bytes(str_obj);
     string_bytes_length = wasm_string_get_length(str_obj);
 
@@ -962,11 +969,11 @@ wasm_string_encode_with_flag(WASMString str_obj, EncodingFlag flag)
 }
 
 static WASMString
-wasm_stringwtf8_obj_new(uint8 *bytes, uint32 length)
+wasm_string_wtf8_obj_new(uint8 *bytes, uint32 length)
 {
-    WASMStringWTF8 *string_obj;
+    WASMStringImpl *string_obj;
 
-    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringImpl)))) {
         return NULL;
     }
     if (length > 0 && !bytes) {
@@ -974,7 +981,7 @@ wasm_stringwtf8_obj_new(uint8 *bytes, uint32 length)
         return NULL;
     }
 
-    string_obj->string_bytes = bytes;
+    string_obj->u.bytes = bytes;
     string_obj->length = length;
     string_obj->is_const = false;
     string_obj->ref_count = 1;
@@ -983,11 +990,11 @@ wasm_stringwtf8_obj_new(uint8 *bytes, uint32 length)
 }
 
 static WASMString
-wasm_stringwtf16_obj_new(uint16 *target_bytes, uint32 length)
+wasm_string_wtf16_obj_new(uint16 *target_bytes, uint32 length)
 {
-    WASMStringWTF16 *string_obj;
+    WASMStringImpl *string_obj;
 
-    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF16)))) {
+    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringImpl)))) {
         return NULL;
     }
 
@@ -996,23 +1003,24 @@ wasm_stringwtf16_obj_new(uint16 *target_bytes, uint32 length)
         return NULL;
     }
 
-    string_obj->string_bytes = target_bytes;
+    string_obj->u.code_units = target_bytes;
     string_obj->length = length;
+    string_obj->is_const = false;
     string_obj->ref_count = 1;
 
     return string_obj;
 }
 
 static WASMString
-wasm_stringref_obj_new_with_8bit_embedder(uint8 *bytes, uint32 bytes_length)
+wasm_string_new_with_8bit_embedder(uint8 *bytes, uint32 bytes_length)
 {
-    return wasm_stringwtf8_obj_new(bytes, bytes_length);
+    return wasm_string_wtf8_obj_new(bytes, bytes_length);
 }
 
 static WASMString
-wasm_stringref_obj_new_with_16bit_embedder(uint16 *bytes, uint32 bytes_length)
+wasm_string_new_with_16bit_embedder(uint16 *bytes, uint32 bytes_length)
 {
-    WASMStringWTF8 *str_obj;
+    WASMStringImpl *str_obj;
     uint8 *string_bytes;
     uint32 *code_points;
     int32 code_point_length, target_bytes_length;
@@ -1022,7 +1030,7 @@ wasm_stringref_obj_new_with_16bit_embedder(uint16 *bytes, uint32 bytes_length)
     string_bytes = encode_8bit_bytes_by_codepoints(
         code_points, code_point_length, &target_bytes_length);
 
-    str_obj = wasm_stringwtf8_obj_new(string_bytes, target_bytes_length);
+    str_obj = wasm_string_wtf8_obj_new(string_bytes, target_bytes_length);
     if (!str_obj) {
         return NULL;
     }
@@ -1040,19 +1048,20 @@ wasm_stringref_obj_new_with_16bit_embedder(uint16 *bytes, uint32 bytes_length)
 WASMString
 wasm_string_new_const(const char *str)
 {
-    WASMStringWTF8 *string_obj;
+    WASMStringImpl *string_obj;
     uint32_t string_length = 0;
 
-    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringWTF8)))) {
+    if (!(string_obj = wasm_runtime_malloc(sizeof(WASMStringImpl)))) {
         return false;
     }
 
     string_obj->length = string_length = strlen(str);
     string_obj->is_const = true;
     string_obj->ref_count = 1;
+    string_obj->source_flag = Bit8;
 
     if (string_length > 0) {
-        string_obj->string_bytes = (uint8 *)str;
+        string_obj->u.bytes = (uint8 *)str;
     }
 
     return string_obj;
@@ -1067,16 +1076,19 @@ wasm_string_new_with_encoding(void *addr, uint32 count, EncodingFlag flag)
 {
     uint8 *target_bytes;
     int32 target_bytes_length;
-    WASMString stringref_obj;
+    WASMString string_obj;
 
     if (flag == WTF8 || flag == UTF8 || flag == LOSSY_UTF8) {
         target_bytes = encode_8bit_bytes_by_8bit_bytes_with_flag(
             addr, count, &target_bytes_length, flag);
         if (target_bytes_length == -1) {
+            if (target_bytes) {
+                wasm_runtime_free(target_bytes);
+            }
             return NULL;
         }
-        stringref_obj = wasm_stringref_obj_new_with_8bit_embedder(
-            target_bytes, target_bytes_length);
+        string_obj = wasm_string_new_with_8bit_embedder(target_bytes,
+                                                        target_bytes_length);
     }
     else {
         /* WTF16 */
@@ -1092,13 +1104,13 @@ wasm_string_new_with_encoding(void *addr, uint32 count, EncodingFlag flag)
             target_code_units[i] = *(int16 *)(addr + (i * 2));
         }
 
-        stringref_obj = wasm_stringref_obj_new_with_16bit_embedder(
-            target_code_units, count);
+        string_obj =
+            wasm_string_new_with_16bit_embedder(target_code_units, count);
 
         wasm_runtime_free(target_code_units);
     }
 
-    return stringref_obj;
+    return string_obj;
 }
 
 /* string.measure */
@@ -1112,14 +1124,7 @@ wasm_string_measure(WASMString str_obj, EncodingFlag flag)
 int32
 wasm_string_wtf16_get_length(WASMString str_obj)
 {
-    WASMStringWTF16 *string_obj = str_obj;
-    int32 length = 0;
-
-    if (string_obj) {
-        length = string_obj->length;
-    }
-
-    return length;
+    return wasm_string_get_length(str_obj);
 }
 
 /* string.encode_xx8 */
@@ -1130,44 +1135,94 @@ wasm_string_wtf16_get_length(WASMString str_obj)
 /* string.encode_wtf16_array */
 int32
 wasm_string_encode(WASMString str_obj, uint32 pos, uint32 count, void *addr,
-                   EncodingFlag flag)
+                   uint32 *next_pos, EncodingFlag flag)
 {
-    int32 bytes_length;
-    uint8 *target_bytes;
+    WASMStringImpl *string_obj = str_obj;
+    int32 target_bytes_length, string_bytes_length, i;
+    uint8 *target_bytes, *string_bytes;
+    uint16 *target_code_units;
+    uint32 written_codes, start_pos, view_bytes_length;
 
-    if (flag == UTF8 || flag == WTF8 || flag == LOSSY_UTF8) {
-        bytes_length = wasm_string_measure(str_obj, flag);
-        target_bytes = (uint8 *)wasm_string_encode_with_flag(str_obj, flag);
-        if (!target_bytes) {
-            return -2;
+    if (string_obj->source_flag == Bit8) {
+        /* string.encode_xx8 */
+        /* string.encode_xx8_array */
+        if (next_pos == NULL) {
+            target_bytes_length =
+                wasm_string_measure_from_start(str_obj, flag, pos);
+            /* string.encode_xxx_array should judge if array have enough space
+             * to store bytes */
+            if ((uint32)target_bytes_length > count) {
+                return Insufficient_Space;
+            }
+            if (flag == UTF8 || flag == WTF8 || flag == LOSSY_UTF8) {
+                target_bytes =
+                    (uint8 *)wasm_string_encode_with_flag(str_obj, flag);
+                if (!target_bytes) {
+                    return Encode_Fail;
+                }
+                if (target_bytes_length == -1) {
+                    return Isolated_Surrogate;
+                }
+                bh_memcpy_s(addr, target_bytes_length, target_bytes,
+                            target_bytes_length);
+                if (target_bytes) {
+                    wasm_runtime_free(target_bytes);
+                }
+            }
+            /* string.encode_wtf16 */
+            /* string.encode_wtf16_array */
+            else {
+                target_code_units =
+                    (uint16 *)wasm_string_encode_with_flag(str_obj, flag);
+                if (!target_code_units) {
+                    return -1;
+                }
+                for (i = 0; i < target_bytes_length; i++) {
+                    *(uint16 *)(addr + (i * 2)) =
+                        (uint16)(target_code_units[i]);
+                }
+                if (target_code_units) {
+                    wasm_runtime_free(target_code_units);
+                }
+            }
+            written_codes = target_bytes_length;
         }
-        if (bytes_length == -1) {
-            return bytes_length;
-        }
-        bh_memcpy_s(addr, bytes_length, target_bytes, bytes_length);
-        if (target_bytes) {
-            wasm_runtime_free(target_bytes);
+        /* stringview_wtf8.encode_xx */
+        else {
+            string_bytes_length = wasm_string_get_length(str_obj);
+            string_bytes = wasm_string_get_bytes(str_obj);
+            start_pos = wtf8_string_bytes_advance(string_bytes,
+                                                  string_bytes_length, pos, 0);
+            *next_pos = wtf8_string_bytes_advance(
+                string_bytes, string_bytes_length, start_pos, count);
+            view_bytes_length = *next_pos - start_pos;
+
+            target_bytes = encode_8bit_bytes_by_8bit_bytes_with_flag(
+                string_bytes + start_pos, view_bytes_length,
+                &target_bytes_length, flag);
+            if (target_bytes_length == -1) {
+                return Isolated_Surrogate;
+            }
+            bh_memcpy_s(addr, target_bytes_length, target_bytes,
+                        target_bytes_length);
+
+            written_codes = target_bytes_length;
         }
     }
+    /* stringview_wtf16.encode */
     else {
-        int32 i;
-        uint16 *target_code_units;
-
-        bytes_length = wasm_string_measure(str_obj, flag);
-        target_code_units =
-            (uint16 *)wasm_string_encode_with_flag(str_obj, flag);
-        if (!target_code_units) {
-            return -1;
-        }
-        for (i = 0; i < bytes_length; i++) {
-            *(uint16 *)(addr + (i * 2)) = (uint16)(target_code_units[i]);
-        }
-        if (target_code_units) {
-            wasm_runtime_free(target_code_units);
+        bh_assert(flag == WTF16);
+        written_codes = 0;
+        string_bytes_length = wasm_string_get_length(str_obj);
+        target_code_units = wasm_string_get_codeunits(str_obj);
+        start_pos = wtf16_pos_treatment(pos, string_bytes_length);
+        for (i = 0; i < (int32)count; i++) {
+            *(uint16 *)(addr + (i * 2)) =
+                (uint16)(target_code_units[i + start_pos]);
+            written_codes++;
         }
     }
-
-    return bytes_length;
+    return written_codes;
 }
 
 /* string.concat */
@@ -1186,8 +1241,8 @@ wasm_string_concat(WASMString str_obj1, WASMString str_obj2)
     target_bytes =
         concat_8bit_bytes(string_bytes1, string_bytes_length1, string_bytes2,
                           string_bytes_length2, &target_bytes_length, flag);
-    str_obj = wasm_stringref_obj_new_with_8bit_embedder(target_bytes,
-                                                        target_bytes_length);
+    str_obj =
+        wasm_string_new_with_8bit_embedder(target_bytes, target_bytes_length);
 
     return str_obj;
 }
@@ -1196,12 +1251,12 @@ wasm_string_concat(WASMString str_obj1, WASMString str_obj2)
 int32
 wasm_string_eq(WASMString str_obj1, WASMString str_obj2)
 {
-    WASMStringWTF8 *string_obj1, *string_obj2;
+    WASMStringImpl *string_obj1, *string_obj2;
     int32_t string_length1, string_length2, i;
     uint8_t *string_bytes1, *string_bytes2;
 
-    string_obj1 = (WASMStringWTF8 *)str_obj1;
-    string_obj2 = (WASMStringWTF8 *)str_obj2;
+    string_obj1 = (WASMStringImpl *)str_obj1;
+    string_obj2 = (WASMStringImpl *)str_obj2;
 
     if (string_obj1 == string_obj2) {
         return 1;
@@ -1213,8 +1268,8 @@ wasm_string_eq(WASMString str_obj1, WASMString str_obj2)
 
     string_length1 = string_obj1->length;
     string_length2 = string_obj2->length;
-    string_bytes1 = string_obj1->string_bytes;
-    string_bytes2 = string_obj2->string_bytes;
+    string_bytes1 = string_obj1->u.bytes;
+    string_bytes2 = string_obj2->u.bytes;
 
     if (string_length1 != string_length2) {
         return 0;
@@ -1258,7 +1313,7 @@ WASMString
 wasm_string_create_view(WASMString str_obj, StringViewType type)
 {
     if (type == STRING_VIEW_WTF8 || type == STRING_VIEW_ITER) {
-        WASMStringWTF8 *string_obj = str_obj;
+        WASMStringImpl *string_obj = str_obj;
         string_obj->ref_count++;
         return string_obj;
     }
@@ -1266,7 +1321,7 @@ wasm_string_create_view(WASMString str_obj, StringViewType type)
         uint8 *target_bytes;
         uint16 *target_code_units;
         int32 target_bytes_length, target_code_units_length;
-        WASMStringWTF16 *string_obj;
+        WASMStringImpl *string_obj;
 
         target_bytes = wasm_string_get_bytes(str_obj);
         target_bytes_length = wasm_string_get_length(str_obj);
@@ -1274,8 +1329,8 @@ wasm_string_create_view(WASMString str_obj, StringViewType type)
             (uint16 *)encode_target_bytes_by_8bit_bytes_with_flag(
                 target_bytes, target_bytes_length, &target_code_units_length,
                 WTF16);
-        string_obj = wasm_stringwtf16_obj_new(target_code_units,
-                                              target_code_units_length);
+        string_obj = wasm_string_wtf16_obj_new(target_code_units,
+                                               target_code_units_length);
 
         return string_obj;
     }
@@ -1334,20 +1389,20 @@ wasm_string_slice(WASMString str_obj, uint32 start, uint32 end,
         bh_memcpy_s(target_bytes, target_bytes_length, string_bytes + start_pos,
                     target_bytes_length);
 
-        res_str_obj = wasm_stringref_obj_new_with_8bit_embedder(
-            target_bytes, target_bytes_length);
+        res_str_obj = wasm_string_new_with_8bit_embedder(target_bytes,
+                                                         target_bytes_length);
     }
     else if (type == STRING_VIEW_WTF16) {
         uint16 *target_code_units;
         int32 code_units_length;
         uint32 start_pos, end_pos;
 
-        code_units_length = wasm_string_measure(str_obj, WTF16);
-        target_code_units = wasm_string_wtf16_get_bytes(str_obj);
+        code_units_length = wasm_string_get_length(str_obj);
+        target_code_units = wasm_string_get_codeunits(str_obj);
 
         start_pos = wtf16_pos_treatment(start, code_units_length);
         end_pos = wtf16_pos_treatment(end, code_units_length);
-        res_str_obj = wasm_stringref_obj_new_with_16bit_embedder(
+        res_str_obj = wasm_string_new_with_16bit_embedder(
             target_code_units + start_pos, end_pos - start_pos);
     }
     else if (type == STRING_VIEW_ITER) {
@@ -1370,8 +1425,8 @@ wasm_string_slice(WASMString str_obj, uint32 start, uint32 end,
         bh_memcpy_s(target_bytes, target_bytes_length, string_bytes + start,
                     target_bytes_length);
 
-        res_str_obj = wasm_stringref_obj_new_with_8bit_embedder(
-            target_bytes, target_bytes_length);
+        res_str_obj = wasm_string_new_with_8bit_embedder(target_bytes,
+                                                         target_bytes_length);
     }
 
     return res_str_obj;
@@ -1385,12 +1440,12 @@ wasm_string_get_wtf16_codeunit(WASMString str_obj, int32 pos)
     uint16 *code_units;
     int16 target_code_unit;
 
-    code_units_len = wasm_string_wtf16_get_length(str_obj);
+    code_units_len = wasm_string_get_length(str_obj);
     if (pos >= code_units_len) {
         return -1;
     }
 
-    code_units = wasm_string_wtf16_get_bytes(str_obj);
+    code_units = wasm_string_get_codeunits(str_obj);
     target_code_unit = (int16) * (code_units + pos);
 
     return target_code_unit;
@@ -1434,16 +1489,16 @@ wasm_string_rewind(WASMString str_obj, uint32 pos, uint32 count,
 /******************* application functions *****************/
 
 void
-wasm_string_dump(WASMString str_obj, EncodingFlag flag)
+wasm_string_dump(WASMString str_obj)
 {
     int32 str_len, i, code_point_length;
     uint8 *string_bytes;
     uint16 *code_units;
     uint32 *code_points;
 
-    if (flag == WTF16) {
-        str_len = wasm_string_wtf16_get_length(str_obj);
-        code_units = wasm_string_wtf16_get_bytes(str_obj);
+    str_len = wasm_string_get_length(str_obj);
+    if (((WASMStringImpl *)str_obj)->source_flag == Bit16) {
+        code_units = wasm_string_get_codeunits(str_obj);
         code_points = encode_codepoints_by_16bit_bytes(code_units, str_len,
                                                        &code_point_length);
         string_bytes = encode_8bit_bytes_by_codepoints(
@@ -1453,8 +1508,7 @@ wasm_string_dump(WASMString str_obj, EncodingFlag flag)
         }
     }
     else {
-        str_len = wasm_string_get_length(str_obj);
-        string_bytes = (uint8 *)wasm_string_encode_with_flag(str_obj, flag);
+        string_bytes = (uint8 *)wasm_string_encode_with_flag(str_obj, UTF8);
     }
 
     if (str_len != 0) {

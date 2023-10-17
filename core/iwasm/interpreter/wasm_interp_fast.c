@@ -2745,7 +2745,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             flag = WTF16;
                             count = wasm_string_measure(str_obj, flag);
                             target_bytes_length = wasm_string_encode(
-                                str_obj, 0, count, maddr, flag);
+                                str_obj, 0, count, maddr, NULL, flag);
                         }
                         else {
                             if (opcode == WASM_OP_STRING_ENCODE_UTF8) {
@@ -2760,7 +2760,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             }
                             count = wasm_string_measure(str_obj, flag);
                             target_bytes_length = wasm_string_encode(
-                                str_obj, 0, count, maddr, flag);
+                                str_obj, 0, count, maddr, NULL, flag);
 
                             if (target_bytes_length == -1) {
                                 wasm_set_exception(
@@ -2883,8 +2883,8 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_LOSSY_UTF8:
                     case WASM_OP_STRINGVIEW_WTF8_ENCODE_WTF8:
                     {
-                        uint32 mem_idx, addr, pos, bytes, end_pos;
-                        int32 target_bytes_length;
+                        uint32 mem_idx, addr, pos, bytes, next_pos;
+                        int32 bytes_written;
                         WASMMemoryInstance *memory_inst;
                         EncodingFlag flag = WTF8;
 
@@ -2909,21 +2909,25 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         memory_inst = module->memories[mem_idx];
                         maddr = memory_inst->memory_data + addr;
 
-                        target_bytes_length = wasm_string_encode(
+                        bytes_written = wasm_string_encode(
                             (WASMString)wasm_stringview_wtf8_obj_get_value(
                                 stringview_wtf8_obj),
-                            pos, bytes, maddr, flag);
+                            pos, bytes, maddr, &next_pos, flag);
 
-                        if (target_bytes_length == -1) {
-                            wasm_set_exception(module,
-                                               "isolated surrogate is seen");
+                        if (bytes_written < 0) {
+                            if (bytes_written == Isolated_Surrogate) {
+                                wasm_set_exception(
+                                    module, "isolated surrogate is seen");
+                            }
+                            else {
+                                wasm_set_exception(module, "encode failed");
+                            }
+
                             goto got_exception;
                         }
 
-                        end_pos = bytes + target_bytes_length;
-
-                        PUSH_I32(end_pos);
-                        PUSH_I32(target_bytes_length);
+                        PUSH_I32(next_pos);
+                        PUSH_I32(bytes_written);
                         HANDLE_OP_END();
                     }
                     case WASM_OP_STRINGVIEW_WTF8_SLICE:
@@ -3035,7 +3039,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                         written_code_units = wasm_string_encode(
                             (WASMString)wasm_stringview_wtf16_obj_get_value(
                                 stringview_wtf16_obj),
-                            pos, len, maddr, WTF16);
+                            pos, len, maddr, NULL, WTF16);
 
                         PUSH_I32(written_code_units);
                         (void)mem_idx;
@@ -3255,7 +3259,7 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                     case WASM_OP_STRING_ENCODE_WTF8_ARRAY:
                     {
                         uint32 start, array_len;
-                        int32 target_bytes_length;
+                        int32 bytes_written;
                         EncodingFlag flag = WTF8;
                         WASMArrayType *array_type;
                         void *arr_start_addr;
@@ -3307,23 +3311,25 @@ wasm_interp_call_func_bytecode(WASMModuleInstance *module,
                             }
                         }
 
-                        count = wasm_string_measure(str_obj, flag);
-                        target_bytes_length = wasm_string_encode(
-                            str_obj, 0, count, arr_start_addr, flag);
-                        if (target_bytes_length < 0) {
-                            if (target_bytes_length == -1) {
+                        bytes_written = wasm_string_encode(
+                            str_obj, 0, array_len, arr_start_addr, flag);
+                        if (bytes_written < 0) {
+                            if (bytes_written == Isolated_Surrogate) {
                                 wasm_set_exception(
                                     module, "isolated surrogate is seen");
                             }
-                            else {
+                            else if (bytes_written == Insufficient_Space) {
                                 wasm_set_exception(
-                                    module, "string.encode_array failed");
+                                    module, "array space is insufficient");
+                            }
+                            else {
+                                wasm_set_exception(module, "encode failed");
                             }
 
                             goto got_exception;
                         }
 
-                        PUSH_I32(target_bytes_length);
+                        PUSH_I32(bytes_written);
                         HANDLE_OP_END();
                     }
 #endif /* end of WASM_ENABLE_STRINGREF != 0 */

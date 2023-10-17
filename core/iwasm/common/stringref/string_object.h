@@ -23,6 +23,12 @@ typedef enum StringViewType {
     STRING_VIEW_ITER,
 } StringViewType;
 
+typedef enum ErrorCode {
+    Insufficient_Space = -3,
+    Encode_Fail = -2,
+    Isolated_Surrogate = -1,
+} ErrorCode;
+
 /******************* gc finalizer *****************/
 void
 wasm_stringref_obj_finalizer(WASMStringrefObjectRef stringref_obj, void *data);
@@ -67,7 +73,7 @@ wasm_string_wtf16_get_length(WASMString str_obj);
 /* string.encode_wtf16_array */
 int32
 wasm_string_encode(WASMString str_obj, uint32 pos, uint32 count, void *addr,
-                   EncodingFlag flag);
+                   uint32 *next_pos, EncodingFlag flag);
 
 /* string.concat */
 WASMString
@@ -116,6 +122,6 @@ wasm_string_rewind(WASMString str_obj, uint32 pos, uint32 count,
 /******************* application functions *****************/
 
 void
-wasm_string_dump(WASMString str_obj, EncodingFlag flag);
+wasm_string_dump(WASMString str_obj);
 
 #endif /* end of _STRING_OBJECT_H_ */

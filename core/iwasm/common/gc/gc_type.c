@@ -750,12 +750,14 @@ wasm_is_reftype_supers_of_extern(uint8 type)
     return (type == REF_TYPE_EXTERNREF) ? true : false;
 }
 
+#if WASM_ENABLE_STRINGREF != 0
 inline static bool
 wasm_is_reftype_supers_of_string(uint8 type)
 {
     return (type == REF_TYPE_STRINGREF || type == REF_TYPE_ANYREF) ? true
                                                                    : false;
 }
+#endif
 
 inline static bool
 wasm_is_reftype_supers_of_none(uint8 type, const WASMRefType *ref_type,
@@ -763,7 +765,11 @@ wasm_is_reftype_supers_of_none(uint8 type, const WASMRefType *ref_type,
 {
     if (type == REF_TYPE_NULLREF || type == REF_TYPE_I31REF
         || type == REF_TYPE_STRUCTREF || type == REF_TYPE_ARRAYREF
-        || type == REF_TYPE_STRINGREF || wasm_is_reftype_supers_of_eq(type))
+        || wasm_is_reftype_supers_of_eq(type)
+#if WASM_ENABLE_STRINGREF != 0
+        || type == REF_TYPE_STRINGREF
+#endif
+    )
         return true;
 
     if (type == REF_TYPE_HT_NULLABLE && ref_type != NULL
