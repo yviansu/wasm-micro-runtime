@@ -743,31 +743,30 @@ wtf8_string_bytes_iter_next(uint8 *string_bytes, int32 string_bytes_length,
     return cur_pos;
 }
 
-// static int32
-// wtf8_string_bytes_iter_advance(uint8 *string_bytes, int32
-// string_bytes_length,
-//                                int32 cur_pos, uint32 code_points_count,
-//                                uint32 *code_points_consumed)
-// {
-//     uint32 advance_count = 0, target_bytes_count, advance_pos;
+static int32
+wtf8_string_bytes_iter_advance(uint8 *string_bytes, int32 string_bytes_length,
+                               int32 cur_pos, uint32 code_points_count,
+                               uint32 *code_points_consumed)
+{
+    uint32 advance_count = 0, target_bytes_count, advance_pos;
 
-//     while (advance_count < code_points_count) {
-//         if (cur_pos == string_bytes_length) {
-//             break;
-//         }
-//         advance_count++;
-//         advance_pos = align_wtf8_sequential(string_bytes, cur_pos + 1,
-//                                             string_bytes_length);
-//         target_bytes_count = advance_pos - cur_pos;
-//         cur_pos += target_bytes_count;
-//     }
+    while (advance_count < code_points_count) {
+        if (cur_pos == string_bytes_length) {
+            break;
+        }
+        advance_count++;
+        advance_pos = align_wtf8_sequential(string_bytes, cur_pos + 1,
+                                            string_bytes_length);
+        target_bytes_count = advance_pos - cur_pos;
+        cur_pos += target_bytes_count;
+    }
 
-//     if (code_points_consumed) {
-//         *code_points_consumed = advance_count;
-//     }
+    if (code_points_consumed) {
+        *code_points_consumed = advance_count;
+    }
 
-//     return cur_pos;
-// }
+    return cur_pos;
+}
 
 static int32
 wtf8_string_bytes_iter_rewind(uint8 *string_bytes, int32 string_bytes_length,
@@ -982,6 +981,7 @@ wasm_string_wtf8_obj_new(uint8 *bytes, uint32 length)
     }
 
     string_obj->u.bytes = bytes;
+    string_obj->source_flag = Bit8;
     string_obj->length = length;
     string_obj->is_const = false;
     string_obj->ref_count = 1;
@@ -1004,6 +1004,7 @@ wasm_string_wtf16_obj_new(uint16 *target_bytes, uint32 length)
     }
 
     string_obj->u.code_units = target_bytes;
+    string_obj->source_flag = Bit16;
     string_obj->length = length;
     string_obj->is_const = false;
     string_obj->ref_count = 1;
@@ -1348,11 +1349,14 @@ wasm_string_advance(WASMString str_obj, uint32 pos, uint32 count,
 
     string_bytes = wasm_string_get_bytes(str_obj);
     string_bytes_length = wasm_string_get_length(str_obj);
-    next_pos = wtf8_string_bytes_advance(string_bytes, string_bytes_length, pos,
-                                         count);
 
     if (consumed) {
-        *consumed = next_pos - pos;
+        next_pos = wtf8_string_bytes_iter_advance(
+            string_bytes, string_bytes_length, pos, count, consumed);
+    }
+    else {
+        next_pos = wtf8_string_bytes_advance(string_bytes, string_bytes_length,
+                                             pos, count);
     }
 
     return next_pos;
